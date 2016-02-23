@@ -13,6 +13,7 @@ public class MainController {
     @RequestMapping("/")
     @ResponseBody
     String home() {
+        //Reikia kazka daryti
         return "Užvaldyk pasaulį! Pirk čemodaną!XXXXYY";
     }
 

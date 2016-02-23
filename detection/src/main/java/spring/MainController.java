@@ -13,7 +13,7 @@ public class MainController {
     @RequestMapping("/")
     @ResponseBody
     String home() {
-        return "Užvaldyk pasaulį! Pirk čemodaną!XXXX";
+        return "Užvaldyk pasaulį! Pirk čemodaną!XXXXYY";
     }
 
     public static void main(String[] args) throws Exception {

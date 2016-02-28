@@ -8,17 +8,51 @@
     <artifactId>DDoS</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+    <name>Bakalauras</name>
+    <description>
+        Aplikcaija, skirta DDoS atakoms tirti.
+    </description>
+
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>1.3.2.RELEASE</version>
+        <relativePath />
     </parent>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>9.2-1003-jdbc4</version>
+        </dependency>
+        <!-- Commons -->
+        <dependency>
+            <groupId>commons-dbcp</groupId>
+            <artifactId>commons-dbcp</artifactId>
+            <version>1.4</version>
+        </dependency>
     </dependencies>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.6</maven.compiler.source>
+        <maven.compiler.target>1.6</maven.compiler.target>
+        <spring>4.0.3.RELEASE</spring>
+        <spring-security>3.2.3.RELEASE</spring-security>
+        <spring-messaging>4.0.8.RELEASE</spring-messaging>
+        <spring-boot-websocket-starter>1.0.2.RELEASE</spring-boot-websocket-starter>
+        <hibernate>4.3.5.Final</hibernate>
+    </properties>
+
     <build>
         <plugins>
             <plugin>
@@ -27,4 +61,5 @@
             </plugin>
         </plugins>
     </build>
+
 </project>

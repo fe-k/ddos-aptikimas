@@ -2,14 +2,19 @@ package entities;
 
 
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
 import java.sql.Timestamp;
 
 @Entity
 @Table(name = "packets")
-@org.hibernate.annotations.Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
-public class Packet extends Item {
+public class Packet {
+
+    @Id
+    @GenericGenerator(name="k" , strategy="increment")
+    @GeneratedValue(generator="k")
+    private Integer id;
 
     @Column
     Integer number;
@@ -97,6 +102,14 @@ public class Packet extends Item {
 
     public void setInfo(String info) {
         this.info = info;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
     }
 }
 

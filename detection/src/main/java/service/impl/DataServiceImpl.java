@@ -30,29 +30,26 @@ public class DataServiceImpl implements DataService {
 
     @Override
     @Transactional
-    public void uploadFileToDatabase() throws GeneralException {
-        String[] files = {
-                "C:\\Users\\K\\Desktop\\TrainingData\\w1\\1d-inside.csv"
-                //, "C:\\Users\\K\\Desktop\\TrainingData\\w1\\1d-outside.csv"
-        };
-
-        for (int i = 0, j = 0; i < files.length; i++) {
+    public void uploadFileToDatabase(String[] fileNames) throws GeneralException {
+        int id = packetDao.getMaxPacketId() + 1;
+        for (int i = 0, j = 1; i < fileNames.length; i++) {
             try {
-                BufferedReader br = new BufferedReader(new FileReader(files[i]));
+                BufferedReader br = new BufferedReader(new FileReader(fileNames[i]));
                 String line;
                 List<Packet> temp = new ArrayList<Packet>();
                 while ((line = br.readLine()) != null) {
                     /* Gaunam paketą iš eilutės */
                     Packet p = getPacket(line, i);
-                    p.setId(j);
+                    p.setId(id);
                     temp.add(p);
 
                     if (j % 1000 == 0) {
                         packetDao.insertPackets(temp);
                         temp = new ArrayList<Packet>();
                     }
-                    j++;
+                    j++; id++;
                 }
+                packetDao.insertPackets(temp);
             } catch (Exception e) {
                 throw new GeneralException("Could not upload file to the database!", e);
             }
@@ -97,33 +94,42 @@ public class DataServiceImpl implements DataService {
     }
 
     private Packet getPacket(String line, int fileIndex) throws GeneralException {
+        /* Suskaidom eilutę pagal "," */
         String[] cols = line.split("\\\",\\\"");
+
+        /* Nuo pirmo stulpelio pašalinam kabutes*/
         cols[0] = cols[0].substring(1);
+
+        /* Nuo paskutinio stulpelio pašalinam kabutes*/
         cols[cols.length - 1] = cols[cols.length - 1].substring(0, cols[cols.length - 1].length() - 1);
 
         Packet packet = new Packet();
-        packet.setNumber(Integer.valueOf(cols[0]));
 
+        // Stulpelių indeksai ---> [NR, LAIKAS, ŠALTINIO IP, PASKIRTIES IP, PROTOKOLAS]
+        int timestampColIndex = 1;
+        int sourceColIndex = 2;
+        int destinationColIndex = 3;
+        int protocolColIndex = 4;
+
+        Timestamp timestamp = getTimestampFromString(cols[timestampColIndex]);
+        packet.setTimestamp(timestamp);
+        packet.setSource(cols[sourceColIndex]);
+        packet.setDestination(cols[destinationColIndex]);
+        packet.setProtocol(cols[protocolColIndex]);
+
+        return packet;
+    }
+
+    private Timestamp getTimestampFromString(String timestampString) throws GeneralException {
         try {
-            String time = cols[1];
-            String[] parts = time.split("\\.");
+            String[] parts = timestampString.split("\\.");
             Date parsedDate = simpleDateFormat.parse(parts[0]);
             Timestamp timestamp = new Timestamp(parsedDate.getTime());
             timestamp.setNanos(Integer.parseInt(parts[1]) * 1000);
-            packet.setTimestamp(timestamp);
+            return timestamp;
         } catch (Exception e) {
-            throw new GeneralException("Could", e);
+            throw new GeneralException("Blogas datos formatas!", e);
         }
-
-
-        packet.setSource(cols[2]);
-        packet.setDestination(cols[3]);
-        packet.setProtocol(cols[4]);
-        packet.setLength(Integer.valueOf(cols[5]));
-        packet.setInfo(cols[6]);
-        packet.setFileName(String.valueOf(fileIndex));
-
-        return packet;
     }
 
 }

@@ -1,6 +1,7 @@
 package controllers;
 
 import dto.post.EntropyPost;
+import dto.post.UploadFilePost;
 import exceptions.ExceptionPrinter;
 import exceptions.GeneralException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,12 +31,13 @@ public class MainController {
         return "redirect:index.html";
     }
 
-    @RequestMapping("/uploadFiles")
+    @RequestMapping(value = "/uploadFiles", method = RequestMethod.POST)
     @ResponseBody
-    String first() {
+    String uploadFile(@ModelAttribute UploadFilePost uploadFilePost) {
         String response;
         try {
-            dataService.uploadFileToDatabase();
+            String[] fileNames = uploadFilePost.getFileName().split(";");
+            dataService.uploadFileToDatabase(fileNames);
             response = SUCCESS;
         } catch(Exception e) {
             response = getFullExceptionMessage(e);
@@ -57,6 +59,7 @@ public class MainController {
                 throw new GeneralException("Negalima paversti string'o į datą, blogas formatas!", e);
             }
             response = dataService.getEntropy(start, end, entropyPost.getWindowWidth(), entropyPost.getIncrement());
+            response = "<pre>" + response + "</pre>";
         } catch (Exception e) {
             response = getFullExceptionMessage(e);
         }

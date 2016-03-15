@@ -39,18 +39,14 @@ public class PacketDaoImpl implements PacketDaoCustom {
             public void execute(Connection conn) throws SQLException {
                 PreparedStatement pstmt = null;
                 try {
-                    String sqlInsert = "insert into packets values (?, ?, ?, ?, ?, ?, ?, ?, ?) ";
+                    String sqlInsert = "insert into packets (id, timestamp, source, destination, protocol) values (?, ?, ?, ?, ?) ";
                     pstmt = conn.prepareStatement(sqlInsert);
                     for (Packet p : packets) {
-                        pstmt.setString(1, p.getDestination());
-                        pstmt.setString(2, p.getFileName());
-                        pstmt.setString(3, p.getInfo());
-                        pstmt.setInt(4, p.getLength());
-                        pstmt.setInt(5, p.getNumber());
-                        pstmt.setString(6, p.getProtocol());
-                        pstmt.setString(7, p.getSource());
-                        pstmt.setTimestamp(8, p.getTimestamp());
-                        pstmt.setInt(9, p.getId());
+                        pstmt.setInt(1, p.getId());
+                        pstmt.setTimestamp(2, p.getTimestamp());
+                        pstmt.setString(3, p.getSource());
+                        pstmt.setString(4, p.getDestination());
+                        pstmt.setString(5, p.getProtocol());
 
                         pstmt.addBatch();
                     }
@@ -66,6 +62,23 @@ public class PacketDaoImpl implements PacketDaoCustom {
     }
 
     @Override
+    public int getMaxPacketId() {
+        StringBuilder query = new StringBuilder()
+                .append("select p.id ")
+                .append("from packets as p ")
+                .append("order by p.id desc");
+
+        Query nativeQuery = entityManager.createNativeQuery(query.toString());
+        nativeQuery.setMaxResults(1);
+        List<Object> packetId = nativeQuery.getResultList();
+        if (packetId == null || packetId.isEmpty()) {
+            return 0;
+        } else {
+            return (Integer) packetId.get(0);
+        }
+    }
+
+    @Override
     public List<PacketsInfo> findPacketCounts(Timestamp start, Timestamp end, Integer increment) {
         StringBuilder query = new StringBuilder()
                 .append("select tt.interval_start as t, destination as d, count(*) as c, sum(count(*)) over (partition by tt.interval_start order by tt.interval_start asc) ")
@@ -74,7 +87,6 @@ public class PacketDaoImpl implements PacketDaoCustom {
                 .append("select generate_series as interval_start, generate_series + cast(concat(:increment, 'second') as interval) as interval_end ")
                 .append("from generate_series(cast(:start as timestamp), :end, cast(concat(:increment, 'second') as interval))")
                 .append(") as tt on packets.timestamp >= tt.interval_start and packets.timestamp <= tt.interval_end ")
-                .append("where filename = '0' ")
                 .append("group by tt.interval_start, destination ")
                 .append("order by tt.interval_start asc");
 

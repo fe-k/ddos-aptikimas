@@ -3,16 +3,12 @@ BEGIN
 
 CREATE TABLE IF NOT EXISTS packets
 (
-  destination character varying(255),
-  filename character varying(255),
-  info character varying(16384),
-  length integer,
-  "number" integer,
-  protocol character varying(255),
-  source character varying(255),
-  "timestamp" timestamp without time zone,
-  id integer NOT NULL,
-  CONSTRAINT packets_pkey PRIMARY KEY (id)
+	id integer NOT NULL,
+	"timestamp" timestamp without time zone,
+	source character varying(255),
+  	destination character varying(255),
+  	protocol character varying(255),
+  	CONSTRAINT packets_pkey PRIMARY KEY (id)
 )
 WITH (
   OIDS=FALSE

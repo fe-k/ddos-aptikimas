@@ -7,15 +7,45 @@
 </head>
 <body>
     <div class="line">
-        <button type="button"><a href="uploadFiles">Įkelti failus</a></button>
+        <div class="lineNumber">1</div>
+        <div class="description">
+            <p>Kad įkeltumėte failą, įveskite failo pavadinimą ir paspauskite mygtuką "įkelti failus".</p>
+            <p>Failo formatas turi būti "laikas","šaltinio IP adresas","paskirties IP adresas","Protokolas".</p>
+            <p>T.y. visa informacija kabutėse ir skirtingi stulpeliai atskirti kableliu.</p>
+            <p>Laiko formatas turi būti - yyyy-MM-dd HH:mm:ss.SSSSSS</p>
+        </div>
+        <form action="uploadFiles" method="post" enctype="application/x-www-form-urlencoded">
+            <div>
+                <label for="fileName">Kelias iki failo</label>
+                <input id="fileName" type="text" name="fileName" value="C:\Users\K\Desktop\TrainingData\w1\1d-inside.csv">
+            </div>
+            <div class="buttonHolder">
+                <input type="submit" value="Įkelti failus">
+            </div>
+        </form>
     </div>
     <div class="line">
+        <div class="lineNumber">2</div>
         <form action="entropy" method="post" enctype="application/x-www-form-urlencoded">
-            <input type="text" name="start" value="2015-01-01 15:15:40.0">
-            <input type="text" name="end" value="2015-01-01 20:15:50.0">
-            <input type="text" name="windowWidth" value="50">
-            <input type="text" name="increment" value="1">
-            <input type="submit" value="Apskaičiuoti">
+            <div>
+                <label for="start">Nuo</label>
+                <input id="start" type="text" name="start" value="1999-03-01 08:00:05.0">
+            </div>
+            <div>
+                <label for="end">Iki</label>
+                <input id="end" type="text" name="end" value="1999-03-01 08:10:05.0">
+            </div>
+            <div>
+                <label for="windowWidth">Lango plotis</label>
+                <input id="windowWidth" type="text" name="windowWidth" value="50">
+            </div>
+            <div>
+                <label for="increment">Kas kiek sekundžių</label>
+                <input id="increment" type="text" name="increment" value="1">
+            </div>
+            <div class="buttonHolder">
+                <input type="submit" value="Apskaičiuoti">
+            </div>
         </form>
     </div>
 </body>

@@ -5,6 +5,7 @@ import dao.PacketDao;
 import dto.PacketsInfo;
 import dto.StorageByDestinationInTimeDomain;
 import dto.ValueInTimeInterval;
+import dto.mutualInformation.MutualInformationTable;
 import entities.Packet;
 import exceptions.GeneralException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import javax.transaction.Transactional;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.sql.Timestamp;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -27,6 +29,7 @@ public class DataServiceImpl implements DataService {
     private PacketDao packetDao;
 
     private SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private DecimalFormat decimalFormat = new DecimalFormat("0.0000");
 
     @Override
     @Transactional
@@ -60,7 +63,24 @@ public class DataServiceImpl implements DataService {
     @Transactional
     public String getEntropy(Timestamp start, Timestamp end, Integer increment, Integer windowWidth) throws GeneralException {
         List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
+        StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
 
+        /* Pasiemame entropijos reikšmes */
+        List<ValueInTimeInterval> valuesInTimeIntervals = storage.getListOfEntropies();
+        StringBuilder result = new StringBuilder();
+        for (ValueInTimeInterval v: valuesInTimeIntervals) {
+            result.append(v.getTime()).append("\t").append(v.getValue()).append("\n");
+        }
+        return result.toString();
+    }
+
+    @Override
+    public String getMutualInformation(List<Double> currentValues, List<Double> shiftedValues, int numberOfItems) throws GeneralException {
+        MutualInformationTable table = new MutualInformationTable(currentValues, shiftedValues, numberOfItems);
+        return String.valueOf(table.getMutualInformation());
+    }
+
+    private StorageByDestinationInTimeDomain getStorageWithCalculatedEntropy(List<PacketsInfo> packetsInfo, int windowWidth) {
         StorageByDestinationInTimeDomain storage = new StorageByDestinationInTimeDomain();
 
         if (packetsInfo != null && !packetsInfo.isEmpty()) { //Tiesiog patikrinam ar grįžo kas nors iš duombazės
@@ -83,14 +103,66 @@ public class DataServiceImpl implements DataService {
                 storage.addNewPacketInfo(pi);
             }
         }
+        return storage;
+    }
+
+    @Override
+    public String getEntropyAgainstEntropy(Timestamp start, Timestamp end, Integer increment, Integer windowWidth, Integer goBack) throws GeneralException {
+        List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
+        StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
 
         /* Pasiemame entropijos reikšmes */
         List<ValueInTimeInterval> valuesInTimeIntervals = storage.getListOfEntropies();
+
+        int embeddingDimension = 7;
+        List<Double> parameterValues = getParameterValues(embeddingDimension);
         StringBuilder result = new StringBuilder();
-        for (ValueInTimeInterval v: valuesInTimeIntervals) {
-            result.append(v.getTime()).append("\t").append(v.getValue()).append("\n");
+
+        Double predictedValue = 0.0;
+        for (int i = embeddingDimension; i < valuesInTimeIntervals.size(); i++) {
+            Double currentValue = valuesInTimeIntervals.get(i).getValue();
+            for (int j = 0; j < embeddingDimension; j++) {
+                Double previousValue = valuesInTimeIntervals.get(i - j - 1).getValue();
+                Double parameterValue = parameterValues.get(j);
+                predictedValue += previousValue * parameterValue;
+            }
+
+            //String time = simpleDateFormat.format();
+            String line = getLine("\t", String.valueOf(valuesInTimeIntervals.get(i).getTime().getTime()), decimalFormat.format(currentValue), decimalFormat.format(predictedValue));
+            result.append(line).append("\n");
+
+            predictedValue = 0.0;
         }
+
         return result.toString();
+    }
+
+    private String getLine(String separator, String... columns) {
+        StringBuilder line = new StringBuilder();
+        for (int i = 0; i < columns.length; i++) {
+            if (i > 0) {
+                line.append(separator);
+            }
+            line.append(columns[i]);
+        }
+        return line.toString();
+    }
+
+    private List<Double> getParameterValues(int dimensionCount) {
+        List<Double> parameterValues = new ArrayList<Double>();
+        Double parameterValue = 0.5;
+        Double multiplier = 0.5;
+        Double leftOver = 1.0;
+        for (int i = 0; i < dimensionCount; i++) {
+            if (i + 1 < dimensionCount) {
+                parameterValues.add(parameterValue);
+                leftOver -= parameterValue;
+                parameterValue *= multiplier;
+            } else {
+                parameterValues.add(leftOver);
+            }
+        }
+        return parameterValues;
     }
 
     private Packet getPacket(String line, int fileIndex) throws GeneralException {

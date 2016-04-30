@@ -1,9 +1,6 @@
 package controllers;
 
-import dto.post.EntropyAgainstEntropyPost;
-import dto.post.EntropyPost;
-import dto.post.MutualInformationPost;
-import dto.post.UploadFilePost;
+import dto.post.*;
 import exceptions.ExceptionPrinter;
 import exceptions.GeneralException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,8 +72,8 @@ public class MainController {
     public String getMutualInformation(@ModelAttribute MutualInformationPost mutualInformationPost) {
         String response = null;
         try {
-            String[] currentStringValues = mutualInformationPost.getCurrentValues().split(",");
-            String[] shiftedStringValues = mutualInformationPost.getShiftedValues().split(",");
+            String[] currentStringValues = mutualInformationPost.getCurrentValues().split(" ");
+            String[] shiftedStringValues = mutualInformationPost.getShiftedValues().split(" ");
 
             if (currentStringValues.length != shiftedStringValues.length) {
                 throw new GeneralException("Lengths should be identical!");
@@ -94,6 +91,32 @@ public class MainController {
             int numberOfItems = mutualInformationPost.getNumberOfItems();
 
             return dataService.getMutualInformation(currentValues, shiftedValues, numberOfItems);
+        } catch (Exception e) {
+            response = getFullExceptionMessage(e);
+        }
+        return response;
+    }
+
+    @RequestMapping(value = "/mutualInformationList", method = RequestMethod.POST)
+    @ResponseBody
+    public String getMutualInformationList(@ModelAttribute MutualInformationListPost mutualInformationListPost) {
+        String response = null;
+        try {
+            Timestamp start;
+            Timestamp end;
+            try {
+                start = new Timestamp(dateFormat.parse(mutualInformationListPost.getStart()).getTime());
+                end = new Timestamp(dateFormat.parse(mutualInformationListPost.getEnd()).getTime());
+            } catch (Exception e) {
+                throw new GeneralException("Negalima paversti string'o į datą, blogas formatas!", e);
+            }
+            String entropyParams = mutualInformationListPost.getEntropyParams();
+            Integer windowWidth = Integer.parseInt(entropyParams.split(" ")[0]);
+            Integer increment = Integer.parseInt(entropyParams.split(" ")[1]);
+            Integer dimension = Integer.parseInt(mutualInformationListPost.getDimension());
+
+            response = dataService.getMutualInformationList(start, end, increment, windowWidth, dimension);
+            response = "<pre>" + response + "</pre>";
         } catch (Exception e) {
             response = getFullExceptionMessage(e);
         }

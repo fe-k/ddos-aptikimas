@@ -1,123 +1,133 @@
 package dto.mutualInformation;
 
-import dto.ValueInTimeInterval;
 import exceptions.GeneralException;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class MutualInformationTable {
 
-    protected List<MutualInformationRow> rows = new ArrayList<MutualInformationRow>();
-    protected List<MutualInformationColumn> columns = new ArrayList<MutualInformationColumn>();
-    private Double minValueX;
-    private Double maxValueX;
-    private Double minValueY;
-    private Double maxValueY;
     private Double mutualInformation = 0.0;
-    private int dotCount = 0;
-    private int numberOfItems;
-    private Double reduceLowerLimitBy = 0.001;
 
-    public MutualInformationTable(List<Double> currentValues, List<Double> shiftedVales, int numberOfItems) throws GeneralException {
-        setMinAndMax(currentValues, true);
-        setMinAndMax(shiftedVales, false);
+    private class OrderedValue {
+        private int oldIndex;
+        private double value;
 
-        this.numberOfItems = numberOfItems;
-
-        createTable(numberOfItems, minValueX, maxValueX, minValueY, maxValueY);
-
-        for (int i = 0; i < currentValues.size(); i++) {
-            Double x = currentValues.get(i);
-            Double y = shiftedVales.get(i);
-
-            addDot(x, y);
+        public OrderedValue() {
         }
 
-        calculateMutualInformation();
+        public OrderedValue(int oldIndex, double value) {
+            this.oldIndex = oldIndex;
+            this.value = value;
+        }
+
+        public int getOldIndex() {
+            return oldIndex;
+        }
+
+        public void setOldIndex(int oldIndex) {
+            this.oldIndex = oldIndex;
+        }
+
+        public double getValue() {
+            return value;
+        }
+
+        public void setValue(double value) {
+            this.value = value;
+        }
     }
 
-    private void createTable(int numberOfItems, Double minValueX, Double maxValueX, Double minValueY, Double maxValueY) throws GeneralException {
-        Double stepX = (maxValueX - minValueX) / numberOfItems;
-        Double stepY = (maxValueY - minValueY) / numberOfItems;
+    private class OrderedLists {
+        List<OrderedValue> currentOrderedValues;
+        List<OrderedValue> shiftedOrderedValues;
 
-        for (int i = 0; i < numberOfItems; i++) {
-            columns.add(new MutualInformationColumn());
-        }
+        private OrderedLists(List<Double> currentValues, List<Double> shiftedVales) {
+            currentOrderedValues = new ArrayList<OrderedValue>();
+            shiftedOrderedValues = new ArrayList<OrderedValue>();
 
-        //Susikuriam lentelę
-        for (int i = 0; i < numberOfItems; i++) {
-            MutualInformationRow row = new MutualInformationRow(minValueY, minValueY + stepY);
+            Comparator<OrderedValue> orderedValueComparator = new Comparator<OrderedValue>() {
+                @Override
+                public int compare(OrderedValue o1, OrderedValue o2) {
+                    if (o1.getValue() < o2.getValue()) {
+                        return -1;
+                    } else if (o1.getValue() > o2.getValue()) {
+                        return 1;
+                    } else {
+                        return 0;
+                    }
+                }
+            };
 
-            for (int j = 0; j < numberOfItems; j++) {
-                MutualInformationItem item = new MutualInformationItem(minValueX, minValueX + stepX, minValueY, minValueY + stepY, columns.get(j));
-                row.addItem(item);
-
-                minValueX = minValueX + stepX;
+            for (int i = 0; i < currentValues.size(); i++) {
+                currentOrderedValues.add(new OrderedValue(i, currentValues.get(i)));
+                shiftedOrderedValues.add(new OrderedValue(i, shiftedVales.get(i)));
             }
 
-            rows.add(row);
-            minValueX = minValueX - numberOfItems * stepX;
-            minValueY = minValueY + stepY;
+            Collections.sort(currentOrderedValues, orderedValueComparator);
+            Collections.sort(shiftedOrderedValues, orderedValueComparator);
+        }
+
+        public List<OrderedValue> getCurrentOrderedValues() {
+            return currentOrderedValues;
+        }
+
+        public List<OrderedValue> getShiftedOrderedValues() {
+            return shiftedOrderedValues;
         }
     }
 
-    private void addDot(double x, double y) throws GeneralException {
-        for (MutualInformationRow row: rows) {
-            if (y > row.getMinY() && y <= row.getMaxY()) {
-                row.addDot(x, y);
-                incrementDotCount();
-            }
-        }
-    }
+    public MutualInformationTable(List<Double> currentValues, List<Double> shiftedVales) throws GeneralException {
+        OrderedLists orderedLists = new OrderedLists(currentValues, shiftedVales);
 
-    private void incrementDotCount() {
-        dotCount++;
-    }
+        List<OrderedValue> currentOrderedValues = orderedLists.getCurrentOrderedValues();
+        List<OrderedValue> shiftedOrderedValues = orderedLists.getShiftedOrderedValues();
 
-    private void setMinAndMax(List<Double> values, boolean x) {
-        Double minValue = values.get(0);
-        Double maxValue = values.get(0);
+        int N = currentOrderedValues.size();
+        int Ns = getAmountOfSegments(N);
+        Ns = N % Ns == 0 ? Ns : Ns + 1; //Jeigu nesidalina, tai pridedam vienetą
+        int Nv = getAmountOfValuesInASegment(N);
 
-        for (Double currentValue: values) {
-            if (currentValue < minValue) {
-                minValue = currentValue;
-            }
-            if (currentValue > maxValue) {
-                maxValue = currentValue;
-            }
-        }
+        Integer[][] probabilityMatrix = initializeProbabilityMatrix(Ns);
 
-        if (x) {
-            minValueX = minValue - reduceLowerLimitBy;
-            maxValueX = maxValue;
-        } else {
-            minValueY = minValue - reduceLowerLimitBy;
-            maxValueY = maxValue;
-        }
-    }
+        for (int i = 0; i < N; i++) {
+            int currentIndex = currentOrderedValues.get(i).getOldIndex() / Nv;
+            int shiftedIndex = shiftedOrderedValues.get(i).getOldIndex() / Nv;
+            probabilityMatrix[currentIndex][shiftedIndex]++;
+        };
 
-    private void calculateMutualInformation() {
-        int size = rows.size();
-        for (int i = 0; i < size; i++) {
-            MutualInformationRow row = rows.get(i);
-            for (int j = 0; j < size; j++) {
-                MutualInformationItem item = row.getItem(j);
-                MutualInformationColumn column = item.getColumn();
-
-                int itemDotCount = item.getDotCount();
-                int rowDotCount = row.getDotCount();
-                int columnDotCount = column.getDotCount();
-
-                if (itemDotCount > 0) {
-                    double px = columnDotCount / (double) dotCount;
-                    double py = rowDotCount / (double) dotCount;
-                    double pxy = itemDotCount / (double) dotCount;
-
-                    mutualInformation += pxy * Math.log(pxy / (px * py)) / Math.log(2);
+        int k = N / Nv;
+        for (int i = 0; i < k; i++) {
+            for (int j = 0; j < k; j++) {
+                int newN = Nv * k;
+                int dotCount = probabilityMatrix[i][j];
+                if (dotCount > 0) {
+                    double firstSide = dotCount / (double) newN;
+                    double secondSide = Math.log((dotCount * newN) / (double) (Nv * Nv)) / Math.log(2);
+                    mutualInformation += firstSide * secondSide;
                 }
             }
         }
+    }
+
+    private Integer[][] initializeProbabilityMatrix(int amountOfSegments) {
+        Integer[][] probabilityMatrix = new Integer[amountOfSegments][amountOfSegments];
+        for (int i = 0; i < amountOfSegments; i++) {
+            for (int j = 0; j < amountOfSegments; j++) {
+                probabilityMatrix[i][j] = 0;
+            }
+        }
+        return probabilityMatrix;
+    }
+
+    private int getAmountOfValuesInASegment(int amountOfValues) {
+        return (int) (amountOfValues / (double) getAmountOfSegments(amountOfValues));
+    }
+
+    private int getAmountOfSegments(int amountOfValues) {
+        return (int) Math.sqrt(amountOfValues / (double) 5);
     }
 
     public Double getMutualInformation() {

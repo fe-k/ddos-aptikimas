@@ -52,6 +52,12 @@
             <artifactId>jackson-databind</artifactId>
             <version>2.4.0</version>
         </dependency>
+        <!--Paisom grafikus-->
+        <dependency>
+            <groupId>jfree</groupId>
+            <artifactId>jfreechart</artifactId>
+            <version>1.0.13</version>
+        </dependency>
     </dependencies>
 
     <properties>

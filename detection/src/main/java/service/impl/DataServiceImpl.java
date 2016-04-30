@@ -8,12 +8,25 @@ import dto.ValueInTimeInterval;
 import dto.mutualInformation.MutualInformationTable;
 import entities.Packet;
 import exceptions.GeneralException;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartUtilities;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.axis.ValueAxis;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.chart.plot.XYPlot;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
+import org.jfree.ui.RectangleInsets;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import service.DataService;
 
 import javax.transaction.Transactional;
+import java.awt.*;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
@@ -76,8 +89,126 @@ public class DataServiceImpl implements DataService {
 
     @Override
     public String getMutualInformation(List<Double> currentValues, List<Double> shiftedValues, int numberOfItems) throws GeneralException {
-        MutualInformationTable table = new MutualInformationTable(currentValues, shiftedValues, numberOfItems);
+        MutualInformationTable table = new MutualInformationTable(currentValues, shiftedValues);
         return String.valueOf(table.getMutualInformation());
+    }
+
+    @Override
+    public String getMutualInformationList(Timestamp start, Timestamp end, Integer increment, Integer windowWidth, Integer dimension) throws GeneralException {
+        List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
+        StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
+
+        List<Double> mutualInformationList = new ArrayList<Double>();
+        List<ValueInTimeInterval> valuesInTimeIntervals = storage.getListOfEntropies();
+        List<Double> firstList = convertToDoubleList(valuesInTimeIntervals.subList(0, dimension));
+
+        XYSeries series = new XYSeries("First");
+        for (int i = 0; i < 200; i ++) {
+            List<Double> secondList = convertToDoubleList(valuesInTimeIntervals.subList(i, i + dimension));
+            Double mutualInformation = new MutualInformationTable(firstList, secondList).getMutualInformation();
+            mutualInformationList.add(mutualInformation);
+            series.add(i, mutualInformation);
+        }
+
+        plot(series);
+
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < mutualInformationList.size(); i++) {
+            result.append(i).append("\t").append(mutualInformationList.get(i)).append("\n");
+        }
+        return result.toString();
+    }
+
+    private void plot(XYSeries series) throws GeneralException {
+        XYSeriesCollection seriesCollection = new XYSeriesCollection();
+        seriesCollection.addSeries(series);
+        final JFreeChart chart = ChartFactory.createXYLineChart(
+                null
+                , "Laiko postūmis"
+                , "I"
+                , seriesCollection
+                , PlotOrientation.VERTICAL
+                , true
+                , true
+                , false
+        );
+
+        XYPlot plot = (XYPlot) chart.getPlot();
+        plot.setBackgroundPaint(Color.WHITE);
+        plot.setRangeGridlinePaint(Color.BLACK);
+        plot.setDomainGridlinePaint(Color.BLACK);
+        plot.setAxisOffset(RectangleInsets.ZERO_INSETS);
+        plot.setOutlineVisible(false);
+
+        ValueAxis bottomAxis = plot.getDomainAxis();
+        ValueAxis leftAxis = plot.getRangeAxis();
+        ValueAxis topAxis = null;
+        ValueAxis rightAxis = null;
+
+        try {
+            topAxis = (ValueAxis) bottomAxis.clone();
+            setAxisParameters(topAxis);
+            topAxis.setTickLabelsVisible(false);
+            topAxis.setRange(bottomAxis.getRange());
+            topAxis.setLabel(null);
+            plot.setDomainAxis(1, topAxis);
+        } catch (Exception e) {
+            throw new GeneralException("Negalima klonuoti", e);
+        }
+
+        try {
+            rightAxis = (ValueAxis) plot.getRangeAxis().clone();
+            setAxisParameters(rightAxis);
+            rightAxis.setTickLabelsVisible(false);
+            rightAxis.setRange(leftAxis.getRange());
+            rightAxis.setLabel(null);
+            plot.setRangeAxis(1, rightAxis);
+        } catch (Exception e) {
+            throw new GeneralException("Negalima klonuoti", e);
+        }
+
+        setAxisParameters(bottomAxis);
+        setAxisParameters(leftAxis);
+        leftAxis.setLabelAngle(3.14 / 2);
+
+
+
+        saveToFile("C:\\Users\\K\\Desktop\\Bakalauras\\latex\\paveiksleliai\\xxx.png", chart);
+    }
+
+    private void setAxisParameters(ValueAxis axis) {
+        Stroke stroke = new BasicStroke(2);
+
+        axis.setMinorTickMarksVisible(true);
+        axis.setMinorTickMarkInsideLength(5);
+        axis.setMinorTickMarkOutsideLength(0);
+        axis.setTickMarksVisible(true);
+        axis.setTickMarkInsideLength(10);
+        axis.setTickMarkOutsideLength(0);
+        axis.setAutoTickUnitSelection(true);
+        axis.setAxisLineStroke(stroke);
+        axis.setTickMarkStroke(stroke);
+        axis.setMinorTickCount(1);
+    }
+
+    private void saveToFile(String path, JFreeChart chart) throws GeneralException {
+        try {
+            File file = new File(path);
+            FileOutputStream os = new FileOutputStream(file);
+            ChartUtilities.writeChartAsPNG(os, chart, 800, 800);
+            os.flush();
+            os.close();
+        } catch (Exception e) {
+            throw new GeneralException("Chart could not be written to file!", e);
+        }
+    }
+
+    private List<Double> convertToDoubleList(List<ValueInTimeInterval> valueInTimeIntervalList) {
+        List<Double> doubleList = new ArrayList<Double>();
+        for (ValueInTimeInterval valueInTimeInterval: valueInTimeIntervalList) {
+            doubleList.add(valueInTimeInterval.getValue());
+        }
+        return doubleList;
     }
 
     private StorageByDestinationInTimeDomain getStorageWithCalculatedEntropy(List<PacketsInfo> packetsInfo, int windowWidth) {

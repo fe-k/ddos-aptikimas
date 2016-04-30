@@ -84,8 +84,8 @@ public class PacketDaoImpl implements PacketDaoCustom {
                 .append("select tt.interval_start as t, destination as d, count(*) as c, sum(count(*)) over (partition by tt.interval_start order by tt.interval_start asc) ")
                 .append("from packets ")
                 .append("right join ( ")
-                .append("select generate_series as interval_start, generate_series + cast(concat(:increment, 'second') as interval) as interval_end ")
-                .append("from generate_series(cast(:start as timestamp), :end, cast(concat(:increment, 'second') as interval))")
+                .append("select generate_series as interval_start, generate_series + cast(concat(:increment, 'millisecond') as interval) as interval_end ")
+                .append("from generate_series(cast(:start as timestamp), :end, cast(concat(:increment, 'millisecond') as interval))")
                 .append(") as tt on packets.timestamp >= tt.interval_start and packets.timestamp <= tt.interval_end ")
                 .append("group by tt.interval_start, destination ")
                 .append("order by tt.interval_start asc");

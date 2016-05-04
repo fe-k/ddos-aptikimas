@@ -3,11 +3,16 @@ package service.impl;
 
 import dao.PacketDao;
 import dto.PacketsInfo;
+import dto.Picture;
 import dto.StorageByDestinationInTimeDomain;
 import dto.ValueInTimeInterval;
 import dto.mutualInformation.MutualInformationTable;
 import entities.Packet;
 import exceptions.GeneralException;
+import org.apache.commons.math3.linear.BlockRealMatrix;
+import org.apache.commons.math3.linear.LUDecomposition;
+import org.apache.commons.math3.linear.QRDecomposition;
+import org.apache.commons.math3.linear.RealMatrix;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
@@ -15,6 +20,8 @@ import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.xy.XYItemRenderer;
+import org.jfree.data.xy.XYDataItem;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.ui.RectangleInsets;
@@ -63,237 +70,14 @@ public class DataServiceImpl implements DataService {
                         packetDao.insertPackets(temp);
                         temp = new ArrayList<Packet>();
                     }
-                    j++; id++;
+                    j++;
+                    id++;
                 }
                 packetDao.insertPackets(temp);
             } catch (Exception e) {
                 throw new GeneralException("Could not upload file to the database!", e);
             }
         }
-    }
-
-    @Override
-    @Transactional
-    public String getEntropy(Timestamp start, Timestamp end, Integer increment, Integer windowWidth) throws GeneralException {
-        List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
-        StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
-
-        /* Pasiemame entropijos reikšmes */
-        List<ValueInTimeInterval> valuesInTimeIntervals = storage.getListOfEntropies();
-        StringBuilder result = new StringBuilder();
-        for (ValueInTimeInterval v: valuesInTimeIntervals) {
-            result.append(v.getTime()).append("\t").append(v.getValue()).append("\n");
-        }
-        return result.toString();
-    }
-
-    @Override
-    public String getMutualInformation(List<Double> currentValues, List<Double> shiftedValues, int numberOfItems) throws GeneralException {
-        MutualInformationTable table = new MutualInformationTable(currentValues, shiftedValues);
-        return String.valueOf(table.getMutualInformation());
-    }
-
-    @Override
-    public String getMutualInformationList(Timestamp start, Timestamp end, Integer increment, Integer windowWidth, Integer dimension) throws GeneralException {
-        List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
-        StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
-
-        List<Double> mutualInformationList = new ArrayList<Double>();
-        List<ValueInTimeInterval> valuesInTimeIntervals = storage.getListOfEntropies();
-        List<Double> firstList = convertToDoubleList(valuesInTimeIntervals.subList(0, dimension));
-
-        XYSeries series = new XYSeries("First");
-        for (int i = 0; i < 200; i ++) {
-            List<Double> secondList = convertToDoubleList(valuesInTimeIntervals.subList(i, i + dimension));
-            Double mutualInformation = new MutualInformationTable(firstList, secondList).getMutualInformation();
-            mutualInformationList.add(mutualInformation);
-            series.add(i, mutualInformation);
-        }
-
-        plot(series);
-
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < mutualInformationList.size(); i++) {
-            result.append(i).append("\t").append(mutualInformationList.get(i)).append("\n");
-        }
-        return result.toString();
-    }
-
-    private void plot(XYSeries series) throws GeneralException {
-        XYSeriesCollection seriesCollection = new XYSeriesCollection();
-        seriesCollection.addSeries(series);
-        final JFreeChart chart = ChartFactory.createXYLineChart(
-                null
-                , "Laiko postūmis"
-                , "I"
-                , seriesCollection
-                , PlotOrientation.VERTICAL
-                , true
-                , true
-                , false
-        );
-
-        XYPlot plot = (XYPlot) chart.getPlot();
-        plot.setBackgroundPaint(Color.WHITE);
-        plot.setRangeGridlinePaint(Color.BLACK);
-        plot.setDomainGridlinePaint(Color.BLACK);
-        plot.setAxisOffset(RectangleInsets.ZERO_INSETS);
-        plot.setOutlineVisible(false);
-
-        ValueAxis bottomAxis = plot.getDomainAxis();
-        ValueAxis leftAxis = plot.getRangeAxis();
-        ValueAxis topAxis = null;
-        ValueAxis rightAxis = null;
-
-        try {
-            topAxis = (ValueAxis) bottomAxis.clone();
-            setAxisParameters(topAxis);
-            topAxis.setTickLabelsVisible(false);
-            topAxis.setRange(bottomAxis.getRange());
-            topAxis.setLabel(null);
-            plot.setDomainAxis(1, topAxis);
-        } catch (Exception e) {
-            throw new GeneralException("Negalima klonuoti", e);
-        }
-
-        try {
-            rightAxis = (ValueAxis) plot.getRangeAxis().clone();
-            setAxisParameters(rightAxis);
-            rightAxis.setTickLabelsVisible(false);
-            rightAxis.setRange(leftAxis.getRange());
-            rightAxis.setLabel(null);
-            plot.setRangeAxis(1, rightAxis);
-        } catch (Exception e) {
-            throw new GeneralException("Negalima klonuoti", e);
-        }
-
-        setAxisParameters(bottomAxis);
-        setAxisParameters(leftAxis);
-        leftAxis.setLabelAngle(3.14 / 2);
-
-
-
-        saveToFile("C:\\Users\\K\\Desktop\\Bakalauras\\latex\\paveiksleliai\\xxx.png", chart);
-    }
-
-    private void setAxisParameters(ValueAxis axis) {
-        Stroke stroke = new BasicStroke(2);
-
-        axis.setMinorTickMarksVisible(true);
-        axis.setMinorTickMarkInsideLength(5);
-        axis.setMinorTickMarkOutsideLength(0);
-        axis.setTickMarksVisible(true);
-        axis.setTickMarkInsideLength(10);
-        axis.setTickMarkOutsideLength(0);
-        axis.setAutoTickUnitSelection(true);
-        axis.setAxisLineStroke(stroke);
-        axis.setTickMarkStroke(stroke);
-        axis.setMinorTickCount(1);
-    }
-
-    private void saveToFile(String path, JFreeChart chart) throws GeneralException {
-        try {
-            File file = new File(path);
-            FileOutputStream os = new FileOutputStream(file);
-            ChartUtilities.writeChartAsPNG(os, chart, 800, 800);
-            os.flush();
-            os.close();
-        } catch (Exception e) {
-            throw new GeneralException("Chart could not be written to file!", e);
-        }
-    }
-
-    private List<Double> convertToDoubleList(List<ValueInTimeInterval> valueInTimeIntervalList) {
-        List<Double> doubleList = new ArrayList<Double>();
-        for (ValueInTimeInterval valueInTimeInterval: valueInTimeIntervalList) {
-            doubleList.add(valueInTimeInterval.getValue());
-        }
-        return doubleList;
-    }
-
-    private StorageByDestinationInTimeDomain getStorageWithCalculatedEntropy(List<PacketsInfo> packetsInfo, int windowWidth) {
-        StorageByDestinationInTimeDomain storage = new StorageByDestinationInTimeDomain();
-
-        if (packetsInfo != null && !packetsInfo.isEmpty()) { //Tiesiog patikrinam ar grįžo kas nors iš duombazės
-            storage.setWindowWidth(windowWidth); //Nustatome lango plotį, kitaip būtų naudojamas defaultinis
-
-            for (int i = 0; i < packetsInfo.size(); i++) { //Važiuojam per paketų informaciją saugojančius objektus
-                PacketsInfo pi = packetsInfo.get(i);
-
-                /* Jeigu apdorojamo objekto laikas pasikeitė, tarkim visi prieš tai apdorojami paketai
-                * buvo iš pirmos sekundės, o dabar jau gavome paketą iš antros sekundės, tai dabartinio
-                * interalo paketus išsisaugojame atminyje, ir išvalome dabartinio laiko paketų masyvą,
-                * kad galėtumėme saugoti naujus paketus */
-                if (storage.timeExceedsCurrentTime(pi.getTime())) {
-                    storage
-                            .addCurrentIntervalToStorage()
-                            .cleanCurrentInterval();
-                }
-
-                /* Tiesiog paduodame dabartinį objektą apdorojimui */
-                storage.addNewPacketInfo(pi);
-            }
-        }
-        return storage;
-    }
-
-    @Override
-    public String getEntropyAgainstEntropy(Timestamp start, Timestamp end, Integer increment, Integer windowWidth, Integer goBack) throws GeneralException {
-        List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
-        StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
-
-        /* Pasiemame entropijos reikšmes */
-        List<ValueInTimeInterval> valuesInTimeIntervals = storage.getListOfEntropies();
-
-        int embeddingDimension = 7;
-        List<Double> parameterValues = getParameterValues(embeddingDimension);
-        StringBuilder result = new StringBuilder();
-
-        Double predictedValue = 0.0;
-        for (int i = embeddingDimension; i < valuesInTimeIntervals.size(); i++) {
-            Double currentValue = valuesInTimeIntervals.get(i).getValue();
-            for (int j = 0; j < embeddingDimension; j++) {
-                Double previousValue = valuesInTimeIntervals.get(i - j - 1).getValue();
-                Double parameterValue = parameterValues.get(j);
-                predictedValue += previousValue * parameterValue;
-            }
-
-            //String time = simpleDateFormat.format();
-            String line = getLine("\t", String.valueOf(valuesInTimeIntervals.get(i).getTime().getTime()), decimalFormat.format(currentValue), decimalFormat.format(predictedValue));
-            result.append(line).append("\n");
-
-            predictedValue = 0.0;
-        }
-
-        return result.toString();
-    }
-
-    private String getLine(String separator, String... columns) {
-        StringBuilder line = new StringBuilder();
-        for (int i = 0; i < columns.length; i++) {
-            if (i > 0) {
-                line.append(separator);
-            }
-            line.append(columns[i]);
-        }
-        return line.toString();
-    }
-
-    private List<Double> getParameterValues(int dimensionCount) {
-        List<Double> parameterValues = new ArrayList<Double>();
-        Double parameterValue = 0.5;
-        Double multiplier = 0.5;
-        Double leftOver = 1.0;
-        for (int i = 0; i < dimensionCount; i++) {
-            if (i + 1 < dimensionCount) {
-                parameterValues.add(parameterValue);
-                leftOver -= parameterValue;
-                parameterValue *= multiplier;
-            } else {
-                parameterValues.add(leftOver);
-            }
-        }
-        return parameterValues;
     }
 
     private Packet getPacket(String line, int fileIndex) throws GeneralException {
@@ -335,4 +119,147 @@ public class DataServiceImpl implements DataService {
         }
     }
 
+    @Override
+    @Transactional
+    public String getEntropy(Timestamp start, Timestamp end, Integer increment, Integer windowWidth) throws GeneralException {
+        List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
+        StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
+
+        /* Pasiemame entropijos reikšmes */
+        List<ValueInTimeInterval> valuesInTimeIntervals = storage.getListOfEntropies();
+        StringBuilder result = new StringBuilder();
+        for (ValueInTimeInterval v : valuesInTimeIntervals) {
+            result.append(v.getTime()).append("\t").append(v.getValue()).append("\n");
+        }
+        return result.toString();
+    }
+
+    @Override
+    public String getMutualInformationList(Timestamp start, Timestamp end, Integer increment, Integer windowWidth, Integer dimension) throws GeneralException {
+        List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
+        StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
+
+        List<Double> valueList = convertToDoubleList(storage.getListOfEntropies());
+
+        StringBuilder result = new StringBuilder();
+        Integer[] dimensionSizes = {500, 1500, 2500, 3500, 4500, 5500};
+        List<Integer> localMinimumList = new ArrayList<Integer>();
+        int pointsToCalculate = 100;
+        Picture mutualEntropyGraph = new Picture();
+        for (int i = 0; i < dimensionSizes.length; i++) {
+            XYSeries series = getSeries(dimensionSizes[i], pointsToCalculate, valueList);
+            mutualEntropyGraph.addSeries(series);
+
+            Double firstLocalMinimum = getFirstLocalMinimum(series.getItems());
+            localMinimumList.add(firstLocalMinimum.intValue());
+            result.append(getLine("\t", String.valueOf(dimensionSizes[i]), String.valueOf(firstLocalMinimum))).append("\n");
+        }
+
+        mutualEntropyGraph.plotLine("X", "Y", "C:\\Users\\K\\Desktop\\Bakalauras\\latex\\paveiksleliai\\mutual_information.png");
+
+        for (int i = 0; i < dimensionSizes.length; i++) {
+            Picture phaseSpace = new Picture();
+            XYSeries phaseSpaceSeries = new XYSeries(dimensionSizes[i]);
+            for (int j = 0; j < dimensionSizes[i]; j++) {
+                Double x = valueList.get(j);
+                Double y = valueList.get(j + localMinimumList.get(i));
+                phaseSpaceSeries.add(x, y);
+            }
+            phaseSpace.addSeries(phaseSpaceSeries);
+            phaseSpace.plotScatter("X", "Y", "C:\\Users\\K\\Desktop\\Bakalauras\\latex\\paveiksleliai\\phase_space_" + dimensionSizes[i] + ".png");
+        }
+
+        return result.toString();
+    }
+
+    private Double getFirstLocalMinimum(List<XYDataItem> items) {
+        Double lastValue = items.get(0).getYValue();
+        for (int i = 0; i < items.size(); i++) {
+            Double value = items.get(i).getYValue();
+            if (value > lastValue) {
+                return items.get(i).getXValue();
+            }
+            lastValue = value;
+        }
+        return 0.0;
+    }
+
+    private XYSeries getSeries(int dimension, int pointsToCalculate, List<Double> valueList) throws GeneralException {
+        List<Double> firstList = valueList.subList(0, dimension);
+
+        XYSeries series = new XYSeries(String.valueOf(dimension));
+        for (int i = 0; i < pointsToCalculate; i++) {
+            List<Double> secondList = valueList.subList(i, i + dimension);
+            Double mutualInformation = new MutualInformationTable(firstList, secondList).getMutualInformation();
+            series.add(i, mutualInformation);
+        }
+
+        return series;
+    }
+
+    private List<Double> convertToDoubleList(List<ValueInTimeInterval> valueInTimeIntervalList) {
+        List<Double> doubleList = new ArrayList<Double>();
+        for (ValueInTimeInterval valueInTimeInterval : valueInTimeIntervalList) {
+            doubleList.add(valueInTimeInterval.getValue());
+        }
+        return doubleList;
+    }
+
+    private StorageByDestinationInTimeDomain getStorageWithCalculatedEntropy(List<PacketsInfo> packetsInfo, int windowWidth) {
+        StorageByDestinationInTimeDomain storage = new StorageByDestinationInTimeDomain();
+
+        if (packetsInfo != null && !packetsInfo.isEmpty()) { //Tiesiog patikrinam ar grįžo kas nors iš duombazės
+            storage.setWindowWidth(windowWidth); //Nustatome lango plotį, kitaip būtų naudojamas defaultinis
+
+            for (int i = 0; i < packetsInfo.size(); i++) { //Važiuojam per paketų informaciją saugojančius objektus
+                PacketsInfo pi = packetsInfo.get(i);
+
+                /* Jeigu apdorojamo objekto laikas pasikeitė, tarkim visi prieš tai apdorojami paketai
+                * buvo iš pirmos sekundės, o dabar jau gavome paketą iš antros sekundės, tai dabartinio
+                * interalo paketus išsisaugojame atminyje, ir išvalome dabartinio laiko paketų masyvą,
+                * kad galėtumėme saugoti naujus paketus */
+                if (storage.timeExceedsCurrentTime(pi.getTime())) {
+                    storage
+                            .addCurrentIntervalToStorage()
+                            .cleanCurrentInterval();
+                }
+
+                /* Tiesiog paduodame dabartinį objektą apdorojimui */
+                storage.addNewPacketInfo(pi);
+            }
+        }
+        return storage;
+    }
+
+    private String getLine(String separator, String... columns) {
+        StringBuilder line = new StringBuilder();
+        for (int i = 0; i < columns.length; i++) {
+            if (i > 0) {
+                line.append(separator);
+            }
+            line.append(columns[i]);
+        }
+        return line.toString();
+    }
+
+    @Override
+    public String getMatrixInverse(double[][] matrix) {
+        RealMatrix realMatrix = new BlockRealMatrix(matrix);
+        RealMatrix inverse = new QRDecomposition(realMatrix).getSolver().getInverse();
+
+        double[][] inverseData = inverse.getData();
+
+        return matrixToString(inverseData);
+    }
+
+    private String matrixToString(double[][] data) {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < data.length; i++) {
+            for (int j = 0; j < data[i].length; j++) {
+                result.append("\t").append(data[i][j]);
+            }
+            result.append("\n");
+        }
+        return result.toString();
+    }
 }

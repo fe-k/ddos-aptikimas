@@ -52,33 +52,9 @@
     <div class="line">
         <div class="lineNumber">3</div>
         <div class="description">
-            <p>Apskaičiuoja dviejų sąrašų "mutual information"</p>
-        </div>
-        <form action="mutualInformation" method="post" enctype="application/x-www-form-urlencoded">
-            <div>
-                <label for="currentValues">Dabartinės reikšmės</label>
-                <input id="currentValues" type="text" name="currentValues" value="0.3 0.2 0.1 0.2 0.3">
-            </div>
-            <div>
-                <label for="shiftedValues">Pastumtos reikšmės</label>
-                <input id="shiftedValues" type="text" name="shiftedValues" value="0.1 0.2 0.3 0.1 0.3">
-            </div>
-            <div>
-                <label for="numberOfItems">Laukelių skaičius</label>
-                <input id="numberOfItems" type="text" name="numberOfItems" value="3">
-            </div>
-            <div class="buttonHolder">
-                <input type="submit" value="Apskaičiuoti">
-            </div>
-        </form>
-    </div>
-
-    <div class="line">
-        <div class="lineNumber">4</div>
-        <div class="description">
             <p>Apskaičiuoja entropijos pateiktame sąraše "mutual information" kai</p>
             <p>paduodami parametrai skirti entropijos bei "mutual information" skaičiuoti.</p>
-            <p>Gaunama "mutual information" priklausomybė nuo laiko poslinkio.</p>
+            <p>Gaunamos laiko postūmio vertės, kai bendra informacija pasiekia pirmą minimumą</p>
         </div>
         <form action="mutualInformationList" method="post" enctype="application/x-www-form-urlencoded">
             <div>
@@ -103,27 +79,11 @@
         </form>
     </div>
     <div class="line">
-        <div class="lineNumber">5</div>
-        <form action="entropyAgainstEntropy" method="post" enctype="application/x-www-form-urlencoded">
+        <div class="lineNumber">4</div>
+        <form action="calculateMatrixInverse" method="post" enctype="application/x-www-form-urlencoded">
             <div>
-                <label for="startE">Nuo</label>
-                <input id="startE" type="text" name="start" value="1999-03-01 08:00:05.0">
-            </div>
-            <div>
-                <label for="endE">Iki</label>
-                <input id="endE" type="text" name="end" value="1999-03-01 08:10:05.0">
-            </div>
-            <div>
-                <label for="windowWidthE">Lango plotis</label>
-                <input id="windowWidthE" type="text" name="windowWidth" value="50">
-            </div>
-            <div>
-                <label for="incrementE">Kas kiek sekundžių</label>
-                <input id="incrementE" type="text" name="increment" value="1">
-            </div>
-            <div>
-                <label for="goBackE">Kiek grįžti atgal</label>
-                <input id="goBackE" type="text" name="goBack" value="1">
+                <label for="matrix">Matrica</label>
+                <input id="matrix" type="text" name="matrix" value="1 2;3 4">
             </div>
             <div class="buttonHolder">
                 <input type="submit" value="Apskaičiuoti">

@@ -4,8 +4,6 @@ import dto.post.*;
 import exceptions.ExceptionPrinter;
 import exceptions.GeneralException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import service.DataService;
@@ -13,9 +11,7 @@ import service.DataService;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 @Controller
 public class MainController {
@@ -67,36 +63,6 @@ public class MainController {
         return response;
     }
 
-    @RequestMapping(value = "/mutualInformation", method = RequestMethod.POST)
-    @ResponseBody
-    public String getMutualInformation(@ModelAttribute MutualInformationPost mutualInformationPost) {
-        String response = null;
-        try {
-            String[] currentStringValues = mutualInformationPost.getCurrentValues().split(" ");
-            String[] shiftedStringValues = mutualInformationPost.getShiftedValues().split(" ");
-
-            if (currentStringValues.length != shiftedStringValues.length) {
-                throw new GeneralException("Lengths should be identical!");
-            }
-
-            List<Double> currentValues = new ArrayList<Double>();
-            for (String currentValue: currentStringValues) {
-                currentValues.add(Double.parseDouble(currentValue));
-            }
-            List<Double> shiftedValues = new ArrayList<Double>();
-            for (String shiftedValue: shiftedStringValues) {
-                shiftedValues.add(Double.parseDouble(shiftedValue));
-            }
-
-            int numberOfItems = mutualInformationPost.getNumberOfItems();
-
-            return dataService.getMutualInformation(currentValues, shiftedValues, numberOfItems);
-        } catch (Exception e) {
-            response = getFullExceptionMessage(e);
-        }
-        return response;
-    }
-
     @RequestMapping(value = "/mutualInformationList", method = RequestMethod.POST)
     @ResponseBody
     public String getMutualInformationList(@ModelAttribute MutualInformationListPost mutualInformationListPost) {
@@ -123,25 +89,34 @@ public class MainController {
         return response;
     }
 
-    @RequestMapping(value = "/entropyAgainstEntropy", method = RequestMethod.POST)
+    @RequestMapping(value = "/calculateMatrixInverse", method = RequestMethod.POST)
     @ResponseBody
-    public String getEntropyAgainstEntropy(@ModelAttribute EntropyAgainstEntropyPost entropyAgainstEntropyPost) {
+    public String getMatrixInverse(@ModelAttribute MatrixInversePost matrixInversePost) {
         String response = null;
         try {
-            Timestamp start;
-            Timestamp end;
-            try {
-                start = new Timestamp(dateFormat.parse(entropyAgainstEntropyPost.getStart()).getTime());
-                end = new Timestamp(dateFormat.parse(entropyAgainstEntropyPost.getEnd()).getTime());
-            } catch (Exception e) {
-                throw new GeneralException("Negalima paversti string'o į datą, blogas formatas!", e);
+            String[] matrixRows = matrixInversePost.getMatrix().split(";");
+            double[][] matrix = new double[matrixRows.length][getRowColumns(matrixRows[0]).length];
+
+            for (int i = 0; i < matrix.length; i++) {
+                matrix[i] = getRowColumns(matrixRows[i]);
             }
-            response = dataService.getEntropyAgainstEntropy(start, end, entropyAgainstEntropyPost.getIncrement(), entropyAgainstEntropyPost.getWindowWidth(), entropyAgainstEntropyPost.getGoBack());
+
+            response = dataService.getMatrixInverse(matrix);
             response = "<pre>" + response + "</pre>";
         } catch (Exception e) {
             response = getFullExceptionMessage(e);
         }
         return response;
+    }
+
+    private double[] getRowColumns(String row) {
+        String[] values = row.split(" ");
+        int size = values.length;
+        double[] doubleRow = new double[size];
+        for (int i = 0; i < size; i++) {
+            doubleRow[i] = Double.parseDouble(values[i]);
+        }
+        return doubleRow;
     }
 
     private String getFullExceptionMessage(Exception e) {

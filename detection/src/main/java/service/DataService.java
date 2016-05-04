@@ -9,9 +9,8 @@ public interface DataService {
 
     void uploadFileToDatabase(String[] fileNames) throws GeneralException;
     String getEntropy(Timestamp start, Timestamp end, Integer increment, Integer windowWidth) throws GeneralException;
-    String getMutualInformation(List<Double> currentValues, List<Double> shiftedValues, int numberOfItems) throws GeneralException;
     String getMutualInformationList(Timestamp start, Timestamp end, Integer increment, Integer windowWidth, Integer dimension) throws GeneralException;
-    String getEntropyAgainstEntropy(Timestamp start, Timestamp end, Integer increment, Integer windowWidth, Integer goBack) throws GeneralException;
+    String getMatrixInverse(double[][] matrix);
 }
 
 

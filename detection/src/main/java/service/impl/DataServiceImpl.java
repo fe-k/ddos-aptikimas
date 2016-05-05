@@ -39,6 +39,7 @@ import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -135,38 +136,38 @@ public class DataServiceImpl implements DataService {
     }
 
     @Override
-    public String getMutualInformationList(Timestamp start, Timestamp end, Integer increment, Integer windowWidth, Integer dimension) throws GeneralException {
+    public String calculateMutualInformationReturnOptimalTimeDelay(Timestamp start, Timestamp end, Integer increment
+            , Integer windowWidth, List<Integer> pointCountList) throws GeneralException {
         List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
         StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
 
         List<Double> valueList = convertToDoubleList(storage.getListOfEntropies());
 
         StringBuilder result = new StringBuilder();
-        Integer[] dimensionSizes = {500, 1500, 2500, 3500, 4500, 5500};
         List<Integer> localMinimumList = new ArrayList<Integer>();
         int pointsToCalculate = 100;
         Picture mutualEntropyGraph = new Picture();
-        for (int i = 0; i < dimensionSizes.length; i++) {
-            XYSeries series = getSeries(dimensionSizes[i], pointsToCalculate, valueList);
+        for (int i = 0; i < pointCountList.size(); i++) {
+            XYSeries series = getSeries(pointCountList.get(i), pointsToCalculate, valueList);
             mutualEntropyGraph.addSeries(series);
 
             Double firstLocalMinimum = getFirstLocalMinimum(series.getItems());
             localMinimumList.add(firstLocalMinimum.intValue());
-            result.append(getLine("\t", String.valueOf(dimensionSizes[i]), String.valueOf(firstLocalMinimum))).append("\n");
+            result.append(getLine("\t", String.valueOf(pointCountList.get(i)), String.valueOf(firstLocalMinimum))).append("\n");
         }
 
         mutualEntropyGraph.plotLine("X", "Y", "C:\\Users\\K\\Desktop\\Bakalauras\\latex\\paveiksleliai\\mutual_information.png");
 
-        for (int i = 0; i < dimensionSizes.length; i++) {
+        for (int i = 0; i < pointCountList.size(); i++) {
             Picture phaseSpace = new Picture();
-            XYSeries phaseSpaceSeries = new XYSeries(dimensionSizes[i]);
-            for (int j = 0; j < dimensionSizes[i]; j++) {
+            XYSeries phaseSpaceSeries = new XYSeries(pointCountList.get(i));
+            for (int j = 0; j < pointCountList.get(i); j++) {
                 Double x = valueList.get(j);
                 Double y = valueList.get(j + localMinimumList.get(i));
                 phaseSpaceSeries.add(x, y);
             }
             phaseSpace.addSeries(phaseSpaceSeries);
-            phaseSpace.plotScatter("X", "Y", "C:\\Users\\K\\Desktop\\Bakalauras\\latex\\paveiksleliai\\phase_space_" + dimensionSizes[i] + ".png");
+            phaseSpace.plotScatter("X", "Y", "C:\\Users\\K\\Desktop\\Bakalauras\\latex\\paveiksleliai\\phase_space_" + pointCountList.get(i) + ".png");
         }
 
         return result.toString();
@@ -243,13 +244,121 @@ public class DataServiceImpl implements DataService {
     }
 
     @Override
-    public String getMatrixInverse(double[][] matrix) {
+    public String getPredictionParams(Timestamp start, Timestamp end, Integer increment, Integer windowWidth
+    , Integer dimensionCount, List<Integer> pointCount, Integer optimalTimeDelay) throws GeneralException {
+
+        List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
+        StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
+
+        List<Double> valueList = convertToDoubleList(storage.getListOfEntropies());
+
+        Integer pointsToPredict = 100;
+        Double startAt = 0.8;
+
+        XYSeries realValueSeries = new XYSeries(pointsToPredict);
+        XYSeries predictedValueSeries = new XYSeries(pointsToPredict);
+
+        Integer pointCountas = pointCount.get(0);
+
+        Integer size = pointCountas + optimalTimeDelay * dimensionCount;
+        Integer startIndex = new Double(size * startAt).intValue();
+        List<Double> valueSubList = new ArrayList<Double>(valueList.subList(0, size));
+
+        for (int i = startIndex; i < size; i ++) {
+            realValueSeries.add(i, valueSubList.get(i));
+            predictedValueSeries.add(i, valueSubList.get(i));
+        }
+        for (int i = 0; i < pointsToPredict; i++) {
+            Double predictedValue = getPredictedValue(valueSubList, dimensionCount, pointCountas, optimalTimeDelay);
+            Double nextRealValue = valueList.get(size - 1 + i);
+
+            realValueSeries.add(i + size, nextRealValue);
+            predictedValueSeries.add(i + size, predictedValue);
+
+            valueSubList.remove(0);
+            valueSubList.add(predictedValue);
+        }
+
+        Picture picture = new Picture();
+        picture.addSeries(realValueSeries);
+        picture.addSeries(predictedValueSeries);
+        picture.plotLine("X", "Y", "C:\\Users\\K\\Desktop\\Bakalauras\\latex\\paveiksleliai\\predicted.png");
+
+        return "SUCCESS";
+    }
+
+    private Double getPredictedValue(List<Double> valueList, Integer dimensionCount, Integer pointCountas, Integer optimalTimeDelay) throws GeneralException {
+        Integer startingPosition = optimalTimeDelay * dimensionCount;
+        List<List<Double>> matrixBNestedLists = new ArrayList<List<Double>>();
+        List<List<Double>> matrixDNestedLists = new ArrayList<List<Double>>();
+        List<List<Double>> matrixY2NestedLists = new ArrayList<List<Double>>();
+
+        for (int i = 0; i < dimensionCount + 1; i++) {
+            List<Double> row = new ArrayList<Double>();
+            for (int j = 0; j < pointCountas; j++) {
+                Double value;
+                if (i == 0) {
+                    value = 1.0;
+                } else {
+                    value = valueList.get(startingPosition - ((i - 1) * optimalTimeDelay) + j);
+                }
+                row.add(value);
+                if (j == pointCountas - 1) {
+                    matrixY2NestedLists.add(Collections.singletonList(value));
+                }
+            }
+            matrixBNestedLists.add(row);
+
+            if (i == 1) {
+                List<Double> predictionRow = new ArrayList<Double>(row.subList(1, row.size()));
+                predictionRow.add(valueList.get(startingPosition + pointCountas - 1));
+                matrixDNestedLists.add(predictionRow);
+            }
+        }
+
+        double[][] matrixB = nestedListsToMatrix(matrixBNestedLists);
+        double[][] invertedMatrixB;
+        try {
+            invertedMatrixB = inverseMatrix(matrixB);
+        } catch (Exception e) {
+            throw new GeneralException("xx", e);
+        }
+        double[][] matrixD = nestedListsToMatrix(matrixDNestedLists);
+        double[][] coefficientMartixA = multiplyMatrixes(matrixD, invertedMatrixB);
+        double[][] matrixY2 = nestedListsToMatrix(matrixY2NestedLists);
+
+        return multiplyMatrixes(coefficientMartixA, matrixY2)[0][0];
+    }
+
+    private double[][] nestedListsToMatrix(List<List<Double>> nestedLists) {
+        double[][] matrix = new double[nestedLists.size()][];
+
+        int i = 0;
+        for (List<Double> list : nestedLists) {
+            double[] row = new double[list.size()];
+            int j = 0;
+            for (Double value: list) {
+                row[j++] = value.doubleValue();
+            }
+            matrix[i++] = row;
+        }
+
+        return matrix;
+    }
+
+    private double[][] inverseMatrix(double[][] matrix) {
         RealMatrix realMatrix = new BlockRealMatrix(matrix);
         RealMatrix inverse = new QRDecomposition(realMatrix).getSolver().getInverse();
 
         double[][] inverseData = inverse.getData();
+        return inverseData;
+    }
 
-        return matrixToString(inverseData);
+    private double[][] multiplyMatrixes(double[][] first, double[][] second) {
+        RealMatrix firstMatrix = new BlockRealMatrix(first);
+        RealMatrix secondMatrix = new BlockRealMatrix(second);
+
+        return firstMatrix.multiply(secondMatrix).getData();
     }
 
     private String matrixToString(double[][] data) {

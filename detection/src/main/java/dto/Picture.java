@@ -107,7 +107,7 @@ public class Picture {
             float length = i * 1.0f + 1.0f;
             renderer.setSeriesStroke(i, new BasicStroke(3, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND
                     , length, new float[]{length, 10.0f}, 0.0f));
-            renderer.setSeriesPaint(i, new Color(0, 0, 0, 191));
+            //renderer.setSeriesPaint(i, new Color(0, 0, 0, 191));
         }
     }
 

@@ -58,35 +58,38 @@
         </div>
         <form action="mutualInformationList" method="post" enctype="application/x-www-form-urlencoded">
             <div>
-                <label for="startM">Nuo</label>
-                <input id="startM" type="text" name="start" value="1999-03-01 08:01:00.0">
+                <label for="3_start">Nuo</label>
+                <input id="3_start" type="text" name="start" value="1999-03-01 08:10:00.0">
             </div>
             <div>
-                <label for="endM">Iki</label>
-                <input id="endM" type="text" name="end" value="1999-03-01 08:10:00.0">
+                <label for="3_end">Iki</label>
+                <input id="3_end" type="text" name="end" value="1999-03-01 09:10:00.0">
             </div>
             <div>
-                <label for="parametersForEntropy">Entrop [Plotis] [Kas kiek]</label>
-                <input id="parametersForEntropy" type="text" name="entropyParams" value="10 50">
+                <label for="3_windowWidth">Lango plotis</label>
+                <input id="3_windowWidth" type="text" name="windowWidth" value="15">
             </div>
             <div>
-                <label for="parametersForMutualInfo">Mutual info [Plotis]</label>
-                <input id="parametersForMutualInfo" type="text" name="dimension" value="1000">
+                <label for="3_increment">Kas kiek milisekundžių</label>
+                <input id="3_increment" type="text" name="increment" value="130">
+            </div>
+            <div>
+                <label for="3_pointCount">Taškų skaičius</label>
+                <input id="3_pointCount" type="text" name="pointCount" value="2500">
             </div>
             <div class="buttonHolder">
-                <input type="submit" value="Apskaičiuoti">
+                <input type="submit" formaction="optimalTimeDelay" value="Apskaičiuoti">
             </div>
-        </form>
-    </div>
-    <div class="line">
-        <div class="lineNumber">4</div>
-        <form action="calculateMatrixInverse" method="post" enctype="application/x-www-form-urlencoded">
             <div>
-                <label for="matrix">Matrica</label>
-                <input id="matrix" type="text" name="matrix" value="1 2;3 4">
+                <label for="dimensionCount">Dimensijų skaičius</label>
+                <input id="dimensionCount" type="text" name="dimensionCount" value="2">
+            </div>
+            <div>
+                <label for="optimalTimeDelay">Laiko postūmis</label>
+                <input id="optimalTimeDelay" type="text" name="optimalTimeDelay" value="16">
             </div>
             <div class="buttonHolder">
-                <input type="submit" value="Apskaičiuoti">
+                <input type="submit" formaction="calculatePredictionParams" value="Apskaičiuoti prognozavimo parametrus">
             </div>
         </form>
     </div>

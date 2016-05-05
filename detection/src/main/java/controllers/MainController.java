@@ -10,7 +10,6 @@ import service.DataService;
 
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.List;
 
 @Controller
@@ -63,25 +62,18 @@ public class MainController {
         return response;
     }
 
-    @RequestMapping(value = "/mutualInformationList", method = RequestMethod.POST)
+    @RequestMapping(value = "/optimalTimeDelay", method = RequestMethod.POST)
     @ResponseBody
-    public String getMutualInformationList(@ModelAttribute MutualInformationListPost mutualInformationListPost) {
+    public String getOptimalTimeDelay(@ModelAttribute OptimalTimeDelayPost optimalTimeDelayPost) {
         String response = null;
         try {
-            Timestamp start;
-            Timestamp end;
-            try {
-                start = new Timestamp(dateFormat.parse(mutualInformationListPost.getStart()).getTime());
-                end = new Timestamp(dateFormat.parse(mutualInformationListPost.getEnd()).getTime());
-            } catch (Exception e) {
-                throw new GeneralException("Negalima paversti string'o į datą, blogas formatas!", e);
-            }
-            String entropyParams = mutualInformationListPost.getEntropyParams();
-            Integer windowWidth = Integer.parseInt(entropyParams.split(" ")[0]);
-            Integer increment = Integer.parseInt(entropyParams.split(" ")[1]);
-            Integer dimension = Integer.parseInt(mutualInformationListPost.getDimension());
+            Timestamp start = optimalTimeDelayPost.getStartTimestamp(dateFormat);
+            Timestamp end = optimalTimeDelayPost.getEndTimestamp(dateFormat);
+            Integer windowWidth = optimalTimeDelayPost.getWindowWidth();
+            Integer increment = optimalTimeDelayPost.getIncrement();
+            List<Integer> pointCounts = optimalTimeDelayPost.getPointCountList();
 
-            response = dataService.getMutualInformationList(start, end, increment, windowWidth, dimension);
+            response = dataService.calculateMutualInformationReturnOptimalTimeDelay(start, end, increment, windowWidth, pointCounts);
             response = "<pre>" + response + "</pre>";
         } catch (Exception e) {
             response = getFullExceptionMessage(e);
@@ -89,19 +81,20 @@ public class MainController {
         return response;
     }
 
-    @RequestMapping(value = "/calculateMatrixInverse", method = RequestMethod.POST)
+    @RequestMapping(value = "/calculatePredictionParams", method = RequestMethod.POST)
     @ResponseBody
-    public String getMatrixInverse(@ModelAttribute MatrixInversePost matrixInversePost) {
+    public String getPredictionParams(@ModelAttribute PredictionParamsPost predictionParamsPost) {
         String response = null;
         try {
-            String[] matrixRows = matrixInversePost.getMatrix().split(";");
-            double[][] matrix = new double[matrixRows.length][getRowColumns(matrixRows[0]).length];
+            Timestamp start = predictionParamsPost.getStartTimestamp(dateFormat);
+            Timestamp end = predictionParamsPost.getEndTimestamp(dateFormat);
+            Integer windowWidth = predictionParamsPost.getWindowWidth();
+            Integer increment = predictionParamsPost.getIncrement();
+            Integer dimensionCount = predictionParamsPost.getDimensionCount();
+            List<Integer> pointCountList = predictionParamsPost.getPointCountList();
+            Integer optimalTimeDelay = predictionParamsPost.getOptimalTimeDelay();
 
-            for (int i = 0; i < matrix.length; i++) {
-                matrix[i] = getRowColumns(matrixRows[i]);
-            }
-
-            response = dataService.getMatrixInverse(matrix);
+            response = dataService.getPredictionParams(start, end, windowWidth, increment, dimensionCount, pointCountList, optimalTimeDelay);
             response = "<pre>" + response + "</pre>";
         } catch (Exception e) {
             response = getFullExceptionMessage(e);
@@ -120,8 +113,9 @@ public class MainController {
     }
 
     private String getFullExceptionMessage(Exception e) {
-        String exceptionString = new ExceptionPrinter().setException(e).toString();
-        return new StringBuilder(FAILED).append(":\n").append(exceptionString).toString();
+        //String exceptionString = new ExceptionPrinter().setException(e).toString();
+        e.printStackTrace();
+        return new StringBuilder(FAILED).toString();//.append(":\n").append(exceptionString).toString();
     }
 
 }

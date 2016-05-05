@@ -9,8 +9,10 @@ public interface DataService {
 
     void uploadFileToDatabase(String[] fileNames) throws GeneralException;
     String getEntropy(Timestamp start, Timestamp end, Integer increment, Integer windowWidth) throws GeneralException;
-    String getMutualInformationList(Timestamp start, Timestamp end, Integer increment, Integer windowWidth, Integer dimension) throws GeneralException;
-    String getMatrixInverse(double[][] matrix);
+    String calculateMutualInformationReturnOptimalTimeDelay(Timestamp start, Timestamp end, Integer increment
+            , Integer windowWidth, List<Integer> pointCountList) throws GeneralException;
+    String getPredictionParams(Timestamp start, Timestamp end, Integer increment, Integer windowWidth
+            , Integer dimensionCount, List<Integer> pointCount, Integer optimalTimeDelay) throws GeneralException;
 }
 
 

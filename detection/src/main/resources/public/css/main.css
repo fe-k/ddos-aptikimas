@@ -42,7 +42,8 @@
 }
 
 .line form div.buttonHolder input {
-	width: 100px;
+	width: inherit;
+	display: inline-block;
 	padding: 5px;
 }
 

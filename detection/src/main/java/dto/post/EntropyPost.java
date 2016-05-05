@@ -1,5 +1,11 @@
 package dto.post;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import exceptions.GeneralException;
+
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+
 public class EntropyPost {
 
     private String start;
@@ -47,5 +53,23 @@ public class EntropyPost {
 
     public void setIncrement(Integer increment) {
         this.increment = increment;
+    }
+
+    @JsonIgnore
+    public Timestamp getStartTimestamp(SimpleDateFormat dateFormat) throws GeneralException {
+        try {
+            return new Timestamp(dateFormat.parse(start).getTime());
+        } catch (Exception e) {
+            throw new GeneralException("Negalima paversti string'o į datą, blogas formatas!", e);
+        }
+    }
+
+    @JsonIgnore
+    public Timestamp getEndTimestamp(SimpleDateFormat dateFormat) throws GeneralException {
+        try {
+            return new Timestamp(dateFormat.parse(end).getTime());
+        } catch (Exception e) {
+            throw new GeneralException("Negalima paversti string'o į datą, blogas formatas!", e);
+        }
     }
 }

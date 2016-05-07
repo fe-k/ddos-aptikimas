@@ -5,6 +5,7 @@ import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.ValueAxis;
+import org.jfree.chart.encoders.ImageEncoderFactory;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
@@ -12,6 +13,7 @@ import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.ui.RectangleInsets;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -28,8 +30,9 @@ public class Picture {
         seriesCollection = new XYSeriesCollection();
     }
 
-    public void addSeries(XYSeries series) {
+    public Picture addSeries(XYSeries series) {
         seriesCollection.addSeries(series);
+        return this;
     }
 
     public void plotScatter(String xLabel, String yLabel, String pathToFile) throws GeneralException {
@@ -107,7 +110,7 @@ public class Picture {
             float length = i * 1.0f + 1.0f;
             renderer.setSeriesStroke(i, new BasicStroke(3, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND
                     , length, new float[]{length, 10.0f}, 0.0f));
-            //renderer.setSeriesPaint(i, new Color(0, 0, 0, 191));
+            renderer.setSeriesPaint(i, new Color(0, 0, 0, 191));
         }
     }
 
@@ -126,11 +129,14 @@ public class Picture {
         axis.setMinorTickCount(4);
     }
 
-    private void saveToFile(String path, JFreeChart chart) throws GeneralException {
+    synchronized private void saveToFile(String path, JFreeChart chart) throws GeneralException {
         try {
+            ImageIO.setUseCache(false);
+            ImageEncoderFactory.setImageEncoder("png","org.jfree.chart.encoders.KeypointPNGEncoderAdapter");
             File file = new File(path);
             FileOutputStream os = new FileOutputStream(file);
-            ChartUtilities.writeChartAsPNG(os, chart, 800, 800);
+
+            ChartUtilities.writeChartAsJPEG(os, chart, 800, 800);
             os.flush();
             os.close();
         } catch (Exception e) {

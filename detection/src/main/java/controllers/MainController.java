@@ -93,8 +93,11 @@ public class MainController {
             Integer dimensionCount = predictionParamsPost.getDimensionCount();
             List<Integer> pointCountList = predictionParamsPost.getPointCountList();
             Integer optimalTimeDelay = predictionParamsPost.getOptimalTimeDelay();
+            Double startAt = predictionParamsPost.getStartAt();
+            Integer pointsToPredict = predictionParamsPost.getPointsToPredict();
 
-            response = dataService.getPredictionParams(start, end, windowWidth, increment, dimensionCount, pointCountList, optimalTimeDelay);
+            response = dataService.getPredictionParams(start, end, increment, windowWidth, dimensionCount
+                    , pointCountList, optimalTimeDelay, startAt, pointsToPredict);
             response = "<pre>" + response + "</pre>";
         } catch (Exception e) {
             response = getFullExceptionMessage(e);

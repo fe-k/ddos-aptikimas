@@ -10,6 +10,8 @@ public class PredictionParamsPost extends EntropyPost {
     private Integer dimensionCount;
     private String pointCount;
     private Integer optimalTimeDelay;
+    private Double startAt;
+    private Integer pointsToPredict;
 
     public Integer getDimensionCount() {
         return dimensionCount;
@@ -45,5 +47,21 @@ public class PredictionParamsPost extends EntropyPost {
         }
 
         return pointCountList;
+    }
+
+    public Double getStartAt() {
+        return startAt;
+    }
+
+    public void setStartAt(Double startAt) {
+        this.startAt = startAt;
+    }
+
+    public Integer getPointsToPredict() {
+        return pointsToPredict;
+    }
+
+    public void setPointsToPredict(Integer pointsToPredict) {
+        this.pointsToPredict = pointsToPredict;
     }
 }

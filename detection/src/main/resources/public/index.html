@@ -59,23 +59,23 @@
         <form action="mutualInformationList" method="post" enctype="application/x-www-form-urlencoded">
             <div>
                 <label for="3_start">Nuo</label>
-                <input id="3_start" type="text" name="start" value="1999-03-01 08:10:00.0">
+                <input id="3_start" type="text" name="start" value="1999-03-01 09:10:00.0">
             </div>
             <div>
                 <label for="3_end">Iki</label>
-                <input id="3_end" type="text" name="end" value="1999-03-01 09:10:00.0">
+                <input id="3_end" type="text" name="end" value="1999-03-01 09:30:00.0">
             </div>
             <div>
                 <label for="3_windowWidth">Lango plotis</label>
-                <input id="3_windowWidth" type="text" name="windowWidth" value="15">
+                <input id="3_windowWidth" type="text" name="windowWidth" value="20">
             </div>
             <div>
                 <label for="3_increment">Kas kiek milisekundžių</label>
-                <input id="3_increment" type="text" name="increment" value="130">
+                <input id="3_increment" type="text" name="increment" value="250">
             </div>
             <div>
                 <label for="3_pointCount">Taškų skaičius</label>
-                <input id="3_pointCount" type="text" name="pointCount" value="2500">
+                <input id="3_pointCount" type="text" name="pointCount" value="2000">
             </div>
             <div class="buttonHolder">
                 <input type="submit" formaction="optimalTimeDelay" value="Apskaičiuoti">
@@ -87,6 +87,14 @@
             <div>
                 <label for="optimalTimeDelay">Laiko postūmis</label>
                 <input id="optimalTimeDelay" type="text" name="optimalTimeDelay" value="16">
+            </div>
+            <div>
+                <label for="startAt">Pradedam piešti nuo</label>
+                <input id="startAt" type="text" name="startAt" value="0.95">
+            </div>
+            <div>
+                <label for="pointsToPredict">Kiek taškų spėti</label>
+                <input id="pointsToPredict" type="text" name="pointsToPredict" value="5">
             </div>
             <div class="buttonHolder">
                 <input type="submit" formaction="calculatePredictionParams" value="Apskaičiuoti prognozavimo parametrus">

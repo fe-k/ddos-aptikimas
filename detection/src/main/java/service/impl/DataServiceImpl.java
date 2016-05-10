@@ -243,13 +243,13 @@ public class DataServiceImpl implements DataService {
 
     @Override
     public String getPredictionParams(Timestamp start, Timestamp end, Integer increment, Integer windowWidth
-    , Integer dimensionCount, List<Integer> pointCount, Integer optimalTimeDelay, Double startAt, Integer pointsToPredict) throws GeneralException {
+            , Integer dimensionCount, List<Integer> pointCount, Integer optimalTimeDelay, Double startAt, Integer pointsToPredict) throws GeneralException {
 
-        //List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
-        //StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
+        List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
+        StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
 
-        List<Double> valueList = getSinusoide();
-                //convertToDoubleList(storage.getListOfEntropies());
+        List<Double> valueList = //getSinusoide();
+        convertToDoubleList(storage.getListOfEntropies());
 
         XYSeries realValueSeries = new XYSeries(pointsToPredict);
         XYSeries predictedValueSeries = new XYSeries(pointsToPredict);
@@ -263,7 +263,7 @@ public class DataServiceImpl implements DataService {
             valueArray[index] = valueList.get(index);
         }
 
-        for (int i = startIndex; i < size; i ++) {
+        for (int i = startIndex; i < size; i++) {
             realValueSeries.add(i, valueArray[i]);
             predictedValueSeries.add(i, valueArray[i]);
         }
@@ -299,7 +299,13 @@ public class DataServiceImpl implements DataService {
     private List<Double> getSinusoide() {
         List<Double> sinusoide = new ArrayList<Double>();
 
-        double step = 0.01;
+//        for (int i = 0; i < 200; i++) {
+//            for (int j = 0; j < 200; j++) {
+//                sinusoide.add((double) j);
+//            }
+//        }
+
+        double step = 0.03;
         for (int i = 0; i < 1E5; i++) {
             Double value = Math.sin(step * i * Math.PI) + 2;
             sinusoide.add(value);
@@ -321,6 +327,12 @@ public class DataServiceImpl implements DataService {
                 if (i == 0) {
                     value = 1.0;
                 } else {
+//                    int indexToTake = j - (i - 1) * optimalTimeDelay;
+//                    if (indexToTake < 0) {
+//                        value = 0.0;
+//                    } else {
+//                        value = valueArray[indexToTake];
+//                    }
                     value = valueArray[startingPosition - ((i - 1) * optimalTimeDelay) + j];
                 }
                 row[j] = value;
@@ -329,19 +341,33 @@ public class DataServiceImpl implements DataService {
 
             if (i == 1) {
                 System.arraycopy(row, 1, matrixD[0], 0, row.length - 1);
+                //matrixD[0][row.length - 1] = valueArray[pointCountas - 1];
                 matrixD[0][row.length - 1] = valueArray[startingPosition + pointCountas];
             }
         }
 
-        double[][] invertedMatrixB;
-        try {
-            //MatrixUtils.blockInverse(new BlockRealMatrix(matrixB), 4);
-            invertedMatrixB = inverseMatrix(matrixB);
-        } catch (Exception e) {
-            throw new GeneralException("xx", e);
-        }
-        double[][] coefficientMartixA = multiplyMatrixes(matrixD, invertedMatrixB);
-        return coefficientMartixA;
+        return getCoeficientMatrix(matrixB, matrixD);
+//        double[][] invertedMatrixB = invertedMatrixB = inverseMatrix(matrixB);
+//        double[][] coefficientMartixA = multiplyMatrixes(matrixD, invertedMatrixB);
+//        return coefficientMartixA;
+    }
+
+    private double[][] getCoeficientMatrix(double[][] matrixB, double[][] matrixD) {
+        QRDecomposition qrDecomposition = new QRDecomposition(
+                new BlockRealMatrix(matrixB)
+        );
+
+        RealMatrix matrixQT = qrDecomposition.getQT();
+        RealMatrix matrixR = qrDecomposition.getR();
+
+        RealMatrix matrixRinverse = new QRDecomposition(matrixR).getSolver().getInverse();
+
+        RealMatrix coeficientMatrix = new BlockRealMatrix(matrixD)
+                .multiply(matrixRinverse)
+                .multiply(matrixQT);
+
+
+        return coeficientMatrix.getData();
     }
 
     private double[][] nestedListsToMatrix(List<List<Double>> nestedLists) {
@@ -351,7 +377,7 @@ public class DataServiceImpl implements DataService {
         for (List<Double> list : nestedLists) {
             double[] row = new double[list.size()];
             int j = 0;
-            for (Double value: list) {
+            for (Double value : list) {
                 row[j++] = value.doubleValue();
             }
             matrix[i++] = row;

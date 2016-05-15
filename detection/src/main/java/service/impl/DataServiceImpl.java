@@ -9,6 +9,9 @@ import dto.ValueInTimeInterval;
 import dto.mutualInformation.MutualInformationTable;
 import entities.Packet;
 import exceptions.GeneralException;
+import org.apache.commons.math3.fitting.HarmonicCurveFitter;
+import org.apache.commons.math3.fitting.PolynomialCurveFitter;
+import org.apache.commons.math3.fitting.WeightedObservedPoints;
 import org.apache.commons.math3.linear.*;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
@@ -139,17 +142,21 @@ public class DataServiceImpl implements DataService {
         //List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
         //StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
 
-        List<Double> valueList = getSinusoide();//convertToDoubleList(storage.getListOfEntropies());
+        List<Double> valueList = getSinusoideWithError();
+                //getSinusoide();//convertToDoubleList(storage.getListOfEntropies());
 
         StringBuilder result = new StringBuilder();
         List<Integer> localMinimumList = new ArrayList<Integer>();
-        int pointsToCalculate = 1000;
+        int pointsToCalculate = 150;
         Picture mutualEntropyGraph = new Picture();
         for (int i = 0; i < pointCountList.size(); i++) {
             XYSeries series = getSeries(pointCountList.get(i), pointsToCalculate, valueList);
-            mutualEntropyGraph.addSeries(series);
+            XYSeries fittedSeries = getFittedCurve(series.getItems());
 
-            Double firstLocalMinimum = getFirstLocalMinimum(series.getItems());
+            mutualEntropyGraph.addSeries(series);
+            mutualEntropyGraph.addSeries(fittedSeries);
+
+            Double firstLocalMinimum = getFirstLocalMinimum(fittedSeries.getItems());
             localMinimumList.add(firstLocalMinimum.intValue());
             result.append(getLine("\t", String.valueOf(pointCountList.get(i)), String.valueOf(firstLocalMinimum))).append("\n");
         }
@@ -169,6 +176,31 @@ public class DataServiceImpl implements DataService {
         }
 
         return result.toString();
+    }
+
+    private XYSeries getFittedCurve(List<XYDataItem> dataItemList) {
+        int size = dataItemList.size();
+        final WeightedObservedPoints weightedPoints = new WeightedObservedPoints();
+
+        for (int i = 0; i < size; i++) {
+            weightedPoints.add(dataItemList.get(i).getXValue(), dataItemList.get(i).getYValue());
+        }
+
+        final PolynomialCurveFitter fitter = PolynomialCurveFitter.create(9);
+        //final HarmonicCurveFitter harmonicFitter = HarmonicCurveFitter.create();
+
+        //final double[] harmonicParameters = harmonicFitter.fit(weightedPoints.toList());
+        final double[] parameters = fitter.fit(weightedPoints.toList());
+
+        XYSeries fittedSeries = new XYSeries(size);
+        for (int i = 0; i < size; i++) {
+            double value = parameters[0];
+            for (int j = 1; j < parameters.length; j++) {
+                value += Math.pow(i, j) * parameters[j];
+            }
+            fittedSeries.add(i, value);
+        }
+        return fittedSeries;
     }
 
     private Double getFirstLocalMinimum(List<XYDataItem> items) {
@@ -248,8 +280,9 @@ public class DataServiceImpl implements DataService {
         List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
         StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
 
-        List<Double> valueList = //getSinusoide();
-        convertToDoubleList(storage.getListOfEntropies());
+        List<Double> valueList = getSinusoideWithError();
+                //getSinusoide();
+                //convertToDoubleList(storage.getListOfEntropies());
 
         XYSeries realValueSeries = new XYSeries(pointsToPredict);
         XYSeries predictedValueSeries = new XYSeries(pointsToPredict);
@@ -272,7 +305,7 @@ public class DataServiceImpl implements DataService {
             double[][] Y2Matrix = new double[dimensionCount + 1][1];
             Y2Matrix[0][0] = 1.0;
             for (int j = 1; j < dimensionCount + 1; j++) {
-                Y2Matrix[j][0] = valueArray[valueArray.length - j * optimalTimeDelay];
+                Y2Matrix[j][0] = valueArray[valueArray.length - (j - 1) * optimalTimeDelay - 1];
             }
 
             double[][] predictedMatrix = multiplyMatrixes(coeficientMatrix, Y2Matrix);
@@ -298,16 +331,22 @@ public class DataServiceImpl implements DataService {
 
     private List<Double> getSinusoide() {
         List<Double> sinusoide = new ArrayList<Double>();
-
-//        for (int i = 0; i < 200; i++) {
-//            for (int j = 0; j < 200; j++) {
-//                sinusoide.add((double) j);
-//            }
-//        }
-
         double step = 0.03;
         for (int i = 0; i < 1E5; i++) {
             Double value = Math.sin(step * i * Math.PI) + 2;
+            sinusoide.add(value);
+        }
+
+        return sinusoide;
+    }
+
+    public List<Double> getSinusoideWithError() {
+        List<Double> sinusoide = new ArrayList<Double>();
+        double step = 0.02;
+        for (int i = 0; i < 1E5; i++) {
+            double error = Math.random() / 20;
+            Double sin = Math.sin(step * i * Math.PI);
+            Double value = sin + 2 + error;
             sinusoide.add(value);
         }
 
@@ -327,22 +366,18 @@ public class DataServiceImpl implements DataService {
                 if (i == 0) {
                     value = 1.0;
                 } else {
-//                    int indexToTake = j - (i - 1) * optimalTimeDelay;
-//                    if (indexToTake < 0) {
-//                        value = 0.0;
-//                    } else {
-//                        value = valueArray[indexToTake];
-//                    }
                     value = valueArray[startingPosition - ((i - 1) * optimalTimeDelay) + j];
                 }
-                row[j] = value;
+                //row[j] = value;
+                row[pointCountas - 1 - j] = value;
             }
             matrixB[i] = row;
 
             if (i == 1) {
-                System.arraycopy(row, 1, matrixD[0], 0, row.length - 1);
-                //matrixD[0][row.length - 1] = valueArray[pointCountas - 1];
-                matrixD[0][row.length - 1] = valueArray[startingPosition + pointCountas];
+                System.arraycopy(row, 0, matrixD[0], 1, row.length - 1);
+                matrixD[0][0] = valueArray[startingPosition + pointCountas];
+                //System.arraycopy(row, 1, matrixD[0], 0, row.length - 1);
+                //matrixD[0][row.length - 1] = valueArray[startingPosition + pointCountas];
             }
         }
 

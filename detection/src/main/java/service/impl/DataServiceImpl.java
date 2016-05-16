@@ -7,6 +7,7 @@ import dto.Picture;
 import dto.StorageByDestinationInTimeDomain;
 import dto.ValueInTimeInterval;
 import dto.mutualInformation.MutualInformationTable;
+import dto.neighboarPoints.KDTree;
 import entities.Packet;
 import exceptions.GeneralException;
 import org.apache.commons.math3.fitting.HarmonicCurveFitter;
@@ -275,7 +276,8 @@ public class DataServiceImpl implements DataService {
 
     @Override
     public String getPredictionParams(Timestamp start, Timestamp end, Integer increment, Integer windowWidth
-            , Integer dimensionCount, List<Integer> pointCount, Integer optimalTimeDelay, Double startAt, Integer pointsToPredict) throws GeneralException {
+            , Integer dimensionCount, List<Integer> pointCount, Integer neighbourPointLimit
+            , Integer optimalTimeDelay, Double startAt, Integer pointsToPredict) throws GeneralException {
 
         List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
         StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
@@ -289,31 +291,31 @@ public class DataServiceImpl implements DataService {
 
         Integer pointCountas = pointCount.get(0);
 
-        Integer size = pointCountas + optimalTimeDelay * dimensionCount;
-        Integer startIndex = new Double(size * startAt).intValue();
-        double[] valueArray = new double[size];
-        for (int index = 0; index < size; index++) {
+        double[] valueArray = new double[pointCountas];
+        for (int index = 0; index < pointCountas; index++) {
             valueArray[index] = valueList.get(index);
         }
 
-        for (int i = startIndex; i < size; i++) {
+        for (int i = (int) (pointCountas * startAt); i < pointCountas; i++) {
             realValueSeries.add(i, valueArray[i]);
             predictedValueSeries.add(i, valueArray[i]);
         }
         for (int i = 0; i < pointsToPredict; i++) {
-            double[][] coeficientMatrix = getCoeficientMatrix(valueArray, dimensionCount, pointCountas, optimalTimeDelay);
+            double[][] coeficientMatrix = getCoeficientMatrix(valueArray, dimensionCount, neighbourPointLimit, optimalTimeDelay);
             double[][] Y2Matrix = new double[dimensionCount + 1][1];
+
+            double[] vector = getKey(valueArray, dimensionCount, optimalTimeDelay, valueArray.length - 1);
             Y2Matrix[0][0] = 1.0;
-            for (int j = 1; j < dimensionCount + 1; j++) {
-                Y2Matrix[j][0] = valueArray[valueArray.length - (j - 1) * optimalTimeDelay - 1];
+            for (int k = 0; k < vector.length; k++) {
+                Y2Matrix[k + 1][0] = vector[k];
             }
 
             double[][] predictedMatrix = multiplyMatrixes(coeficientMatrix, Y2Matrix);
             double predictedValue = predictedMatrix[0][0];
-            double nextRealValue = valueList.get(size + i);
+            double nextRealValue = valueList.get(pointCountas + i);
 
-            realValueSeries.add(i + size, nextRealValue);
-            predictedValueSeries.add(i + size, predictedValue);
+            realValueSeries.add(i + pointCountas, nextRealValue);
+            predictedValueSeries.add(i + pointCountas, predictedValue);
 
             System.arraycopy(valueArray, 1, valueArray, 0, valueArray.length - 1);
             valueArray[valueArray.length - 1] = predictedValue;
@@ -353,38 +355,67 @@ public class DataServiceImpl implements DataService {
         return sinusoide;
     }
 
-    private double[][] getCoeficientMatrix(double[] valueArray, Integer dimensionCount, Integer pointCountas, Integer optimalTimeDelay) throws GeneralException {
-        Integer startingPosition = optimalTimeDelay * dimensionCount - 1;
-        double[][] matrixB = new double[dimensionCount + 1][pointCountas];
+    private double[][] getCoeficientMatrix(double[] valueArray, Integer dimensionCount, Integer neighbourPointLimit, Integer optimalTimeDelay) throws GeneralException {
+        Integer pointCountas = dimensionCount + 1;
+        double[][] matrixB = new double[pointCountas][pointCountas];
         double[][] matrixD = new double[1][pointCountas];
 
-        for (int i = 0; i < dimensionCount + 1; i++) {
-            double[] row = new double[pointCountas];
-            //List<Double> row = new ArrayList<Double>();
-            for (int j = 0; j < pointCountas; j++) {
-                Double value;
-                if (i == 0) {
-                    value = 1.0;
-                } else {
-                    value = valueArray[startingPosition - ((i - 1) * optimalTimeDelay) + j];
-                }
-                //row[j] = value;
-                row[pointCountas - 1 - j] = value;
-            }
-            matrixB[i] = row;
+        List<Integer> neighbourList = getLastPointNeighbours(valueArray, dimensionCount, neighbourPointLimit, optimalTimeDelay);
 
-            if (i == 1) {
-                System.arraycopy(row, 0, matrixD[0], 1, row.length - 1);
-                matrixD[0][0] = valueArray[startingPosition + pointCountas];
-                //System.arraycopy(row, 1, matrixD[0], 0, row.length - 1);
-                //matrixD[0][row.length - 1] = valueArray[startingPosition + pointCountas];
+        //sudarom B matricą
+        for (int i = 0; i < dimensionCount + 1; i++) {
+            for (int j = 0; j < neighbourList.size(); j++) {
+                double[] column = new double[pointCountas];
+                double[] vector = getKey(valueArray, dimensionCount, optimalTimeDelay, neighbourList.get(j));
+                column[0] = 1;
+                System.arraycopy(vector, 0, column, 1, vector.length);
+
+                for (int k = 0; k < column.length; k++) {
+                    matrixB[k][j] = column[k];
+                }
             }
         }
 
+        //sudarom D matricą
+        for (int i = 0; i < neighbourList.size(); i++) {
+            matrixD[0][i] = valueArray[neighbourList.get(i) + 1];
+        }
+
         return getCoeficientMatrix(matrixB, matrixD);
-//        double[][] invertedMatrixB = invertedMatrixB = inverseMatrix(matrixB);
-//        double[][] coefficientMartixA = multiplyMatrixes(matrixD, invertedMatrixB);
-//        return coefficientMartixA;
+    }
+
+    private List<Integer> getLastPointNeighbours(double[] valueArray, int dimensionCount, int neighbourPointLimit, int optimalTimeDelay) throws GeneralException {
+        try {
+            //Susikonstruojam medį
+            KDTree<Integer> kdTree = new KDTree<Integer>(dimensionCount);
+            int lastIndex = valueArray.length - 2; // -2 nes mums reikia priešpaskutinio indekso
+            for (int i = 0; i < neighbourPointLimit; i++) {
+                double[] key = getKey(valueArray, dimensionCount, optimalTimeDelay, lastIndex - i);
+                if (kdTree.search(key) == null) {
+                    kdTree.insert(key, lastIndex - i);
+                }
+            }
+
+            double[] lastKey = getKey(valueArray, dimensionCount, optimalTimeDelay, lastIndex);
+
+            List<Integer> neighbours = kdTree.nearest(lastKey, dimensionCount + 1);//gražinam m + 1 kaimynų
+            // , bet į juos neįeina originalus, tai reikia pridėti
+//            List<Integer> allIndexes = new ArrayList<Integer>();
+//            allIndexes.add(lastIndex);
+//            allIndexes.addAll(neighbours);
+//            return allIndexes;
+            return neighbours;
+        } catch (Exception e) {
+            throw new GeneralException("KDTree failed!", e);
+        }
+    }
+
+    private double[] getKey(double[] valueArray, int dimensionCount, int optimalTimeDelay, int index) {
+        double[] key = new double[dimensionCount];
+        for (int i = 0; i < dimensionCount; i++) {
+            key[i] = valueArray[index - (i * optimalTimeDelay)];
+        }
+        return key;
     }
 
     private double[][] getCoeficientMatrix(double[][] matrixB, double[][] matrixD) {

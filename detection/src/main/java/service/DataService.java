@@ -12,7 +12,8 @@ public interface DataService {
     String calculateMutualInformationReturnOptimalTimeDelay(Timestamp start, Timestamp end, Integer increment
             , Integer windowWidth, List<Integer> pointCountList) throws GeneralException;
     String getPredictionParams(Timestamp start, Timestamp end, Integer increment, Integer windowWidth
-            , Integer dimensionCount, List<Integer> pointCount, Integer optimalTimeDelay, Double startAt, Integer pointsToPredict) throws GeneralException;
+            , Integer dimensionCount, List<Integer> pointCount, Integer neighbourPointLimit
+            , Integer optimalTimeDelay, Double startAt, Integer pointsToPredict) throws GeneralException;
 }
 
 

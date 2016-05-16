@@ -12,6 +12,15 @@ public class PredictionParamsPost extends EntropyPost {
     private Integer optimalTimeDelay;
     private Double startAt;
     private Integer pointsToPredict;
+    private Integer neighbourPointLimit;
+
+    public Integer getNeighbourPointLimit() {
+        return neighbourPointLimit;
+    }
+
+    public void setNeighbourPointLimit(Integer neighbourPointLimit) {
+        this.neighbourPointLimit = neighbourPointLimit;
+    }
 
     public Integer getDimensionCount() {
         return dimensionCount;

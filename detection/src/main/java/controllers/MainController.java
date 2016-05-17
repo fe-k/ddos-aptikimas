@@ -1,7 +1,6 @@
 package controllers;
 
 import dto.post.*;
-import exceptions.ExceptionPrinter;
 import exceptions.GeneralException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -73,7 +72,7 @@ public class MainController {
             Integer increment = optimalTimeDelayPost.getIncrement();
             List<Integer> pointCounts = optimalTimeDelayPost.getPointCountList();
 
-            response = dataService.calculateMutualInformationReturnOptimalTimeDelay(start, end, increment, windowWidth, pointCounts);
+            response = dataService.getOptimalTimeDelay(start, end, increment, windowWidth, pointCounts);
             response = "<pre>" + response + "</pre>";
         } catch (Exception e) {
             response = getFullExceptionMessage(e);
@@ -97,8 +96,8 @@ public class MainController {
             Integer pointsToPredict = predictionParamsPost.getPointsToPredict();
             Integer neighbourPointLimit = predictionParamsPost.getNeighbourPointLimit();
 
-            response = dataService.getPredictionParams(start, end, increment, windowWidth, dimensionCount
-                    , pointCountList, neighbourPointLimit, optimalTimeDelay, startAt, pointsToPredict);
+            response = dataService.predict(start, end, increment, windowWidth, dimensionCount
+                    , optimalTimeDelay);
             response = "<pre>" + response + "</pre>";
         } catch (Exception e) {
             response = getFullExceptionMessage(e);

@@ -7,42 +7,27 @@ import dto.Picture;
 import dto.StorageByDestinationInTimeDomain;
 import dto.ValueInTimeInterval;
 import dto.mutualInformation.MutualInformationTable;
+import dto.neighboarPoints.Checker;
 import dto.neighboarPoints.KDTree;
 import entities.Packet;
 import exceptions.GeneralException;
-import org.apache.commons.math3.fitting.HarmonicCurveFitter;
 import org.apache.commons.math3.fitting.PolynomialCurveFitter;
 import org.apache.commons.math3.fitting.WeightedObservedPoints;
 import org.apache.commons.math3.linear.*;
-import org.jfree.chart.ChartFactory;
-import org.jfree.chart.ChartUtilities;
-import org.jfree.chart.JFreeChart;
-import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.axis.ValueAxis;
-import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.data.xy.XYDataItem;
 import org.jfree.data.xy.XYSeries;
-import org.jfree.data.xy.XYSeriesCollection;
-import org.jfree.ui.RectangleInsets;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import service.DataService;
 
 import javax.transaction.Transactional;
-import java.awt.*;
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
-
-import static java.lang.System.arraycopy;
 
 @Service("dataService")
 public class DataServiceImpl implements DataService {
@@ -138,13 +123,13 @@ public class DataServiceImpl implements DataService {
     }
 
     @Override
-    public String calculateMutualInformationReturnOptimalTimeDelay(Timestamp start, Timestamp end, Integer increment
+    public String getOptimalTimeDelay(Timestamp start, Timestamp end, Integer increment
             , Integer windowWidth, List<Integer> pointCountList) throws GeneralException {
         //List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
         //StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
 
         List<Double> valueList = getSinusoideWithError();
-                //getSinusoide();//convertToDoubleList(storage.getListOfEntropies());
+        //getSinusoide();//convertToDoubleList(storage.getListOfEntropies());
 
         StringBuilder result = new StringBuilder();
         List<Integer> localMinimumList = new ArrayList<Integer>();
@@ -275,65 +260,105 @@ public class DataServiceImpl implements DataService {
     }
 
     @Override
-    public String getPredictionParams(Timestamp start, Timestamp end, Integer increment, Integer windowWidth
-            , Integer dimensionCount, List<Integer> pointCount, Integer neighbourPointLimit
-            , Integer optimalTimeDelay, Double startAt, Integer pointsToPredict) throws GeneralException {
+    public String predict(Timestamp start, Timestamp end, Integer increment, Integer windowWidth
+            , Integer dimensionCount, Integer optimalTimeDelay) throws GeneralException {
 
-        List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
-        StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
+        List<Double> valueList = getCurrentValues(start, end, increment, windowWidth);
 
-        List<Double> valueList = getSinusoideWithError();
-                //getSinusoide();
-                //convertToDoubleList(storage.getListOfEntropies());
+        XYSeries realValueSeries = new XYSeries(valueList.size());
+        XYSeries predictedValueSeries = new XYSeries(valueList.size());
 
-        XYSeries realValueSeries = new XYSeries(pointsToPredict);
-        XYSeries predictedValueSeries = new XYSeries(pointsToPredict);
+        int pointCountas = 16000;
+        int predictedPointCount = 0;
+        double[] valueArray = getValuesBeforePrediction(pointCountas, valueList);
+        addValuesToSeries(realValueSeries, predictedValueSeries, valueArray, 0.99375, pointCountas);
 
-        Integer pointCountas = pointCount.get(0);
+        StringBuilder result = new StringBuilder();
+        try {
+            while (true) {
+                int i = predictedPointCount;
+                double[][] coeficientMatrix = getCoeficientMatrix(valueArray, dimensionCount, optimalTimeDelay);
+                double[][] Y2Matrix = getY2Matrix(valueArray, dimensionCount, optimalTimeDelay);
+                double[][] predictedMatrix = multiplyMatrixes(coeficientMatrix, Y2Matrix);
 
-        double[] valueArray = new double[pointCountas];
-        for (int index = 0; index < pointCountas; index++) {
-            valueArray[index] = valueList.get(index);
-        }
+                double predictedValue = predictedMatrix[0][0];
+                double nextRealValue = valueList.get(pointCountas + i);
 
-        for (int i = (int) (pointCountas * startAt); i < pointCountas; i++) {
-            realValueSeries.add(i, valueArray[i]);
-            predictedValueSeries.add(i, valueArray[i]);
-        }
-        for (int i = 0; i < pointsToPredict; i++) {
-            double[][] coeficientMatrix = getCoeficientMatrix(valueArray, dimensionCount, neighbourPointLimit, optimalTimeDelay);
-            double[][] Y2Matrix = new double[dimensionCount + 1][1];
+                if (Math.abs(predictedValue - nextRealValue) > nextRealValue) {
+                    break;
+                }
 
-            double[] vector = getKey(valueArray, dimensionCount, optimalTimeDelay, valueArray.length - 1);
-            Y2Matrix[0][0] = 1.0;
-            for (int k = 0; k < vector.length; k++) {
-                Y2Matrix[k + 1][0] = vector[k];
+                realValueSeries.add(i + pointCountas, nextRealValue);
+                predictedValueSeries.add(i + pointCountas, predictedValue);
+
+                valueArray = modifyValueArray(valueArray, predictedValue);
+                predictedPointCount++;
+                result.append("Coffs\n").append(matrixToString(coeficientMatrix)).append("\n");
             }
-
-            double[][] predictedMatrix = multiplyMatrixes(coeficientMatrix, Y2Matrix);
-            double predictedValue = predictedMatrix[0][0];
-            double nextRealValue = valueList.get(pointCountas + i);
-
-            realValueSeries.add(i + pointCountas, nextRealValue);
-            predictedValueSeries.add(i + pointCountas, predictedValue);
-
-            System.arraycopy(valueArray, 1, valueArray, 0, valueArray.length - 1);
-            valueArray[valueArray.length - 1] = predictedValue;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            result.append("FAILED\n");
         }
 
+        plotRealAndPredictedValueGraph(realValueSeries, predictedValueSeries);
+        return result.append(String.format("SUCCESS - PREDICTED POINTS = %d", predictedPointCount)).toString();
+    }
+
+    private void plotRealAndPredictedValueGraph(XYSeries realValueSeries, XYSeries predictedValueSeries) throws GeneralException {
         new Picture()
                 .addSeries(realValueSeries)
                 .plotLine("X", "Y", pictureDirectory + "generated_real_values.png");
         new Picture()
                 .addSeries(predictedValueSeries)
                 .plotLine("X", "Y", pictureDirectory + "generated_predicted_values.png");
+    }
 
-        return "SUCCESS";
+    private double[] modifyValueArray(double[] valueArray, double valueToAdd) {
+        System.arraycopy(valueArray, 1, valueArray, 0, valueArray.length - 1);
+        valueArray[valueArray.length - 1] = valueToAdd;
+        return valueArray;
+    }
+
+    private double[][] getY2Matrix(double[] valueArray, int dimensionCount, int optimalTimeDelay) {
+        double[][] Y2Matrix = new double[dimensionCount + 1][1];
+
+        double[] vector = getVector(valueArray, dimensionCount, optimalTimeDelay, valueArray.length - 1);
+        Y2Matrix[0][0] = 1.0;
+        for (int k = 0; k < vector.length; k++) {
+            Y2Matrix[k + 1][0] = vector[k];
+        }
+
+        return Y2Matrix;
+    }
+
+    private void addValuesToSeries(XYSeries realValueSeries, XYSeries predictedValueSeries, double[] valueArray, double startAt, Integer pointCountas) {
+        for (int i = (int) (pointCountas * startAt); i < pointCountas; i++) {
+            realValueSeries.add(i, valueArray[i]);
+            predictedValueSeries.add(i, valueArray[i]);
+        }
+    }
+
+    private double[] getValuesBeforePrediction(Integer pointCountas, List<Double> allValues) {
+        double[] valueArray = new double[pointCountas];
+        for (int index = 0; index < pointCountas; index++) {
+            valueArray[index] = allValues.get(index);
+        }
+        return valueArray;
+    }
+
+    private List<Double> getCurrentValues(Timestamp start, Timestamp end, Integer increment, Integer windowWidth) {
+        List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
+        StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
+
+        List<Double> valueList = //getSinusoideWithError();
+                getSinusoide();
+        //convertToDoubleList(storage.getListOfEntropies());
+        return valueList;
     }
 
     private List<Double> getSinusoide() {
         List<Double> sinusoide = new ArrayList<Double>();
-        double step = 0.03;
+        double step = 0.005;
         for (int i = 0; i < 1E5; i++) {
             Double value = Math.sin(step * i * Math.PI) + 2;
             sinusoide.add(value);
@@ -344,8 +369,8 @@ public class DataServiceImpl implements DataService {
 
     public List<Double> getSinusoideWithError() {
         List<Double> sinusoide = new ArrayList<Double>();
-        double step = 0.02;
-        for (int i = 0; i < 1E5; i++) {
+        double step = 0.001;
+        for (int i = 0; i < 1E7; i++) {
             double error = Math.random() / 20;
             Double sin = Math.sin(step * i * Math.PI);
             Double value = sin + 2 + error;
@@ -355,18 +380,18 @@ public class DataServiceImpl implements DataService {
         return sinusoide;
     }
 
-    private double[][] getCoeficientMatrix(double[] valueArray, Integer dimensionCount, Integer neighbourPointLimit, Integer optimalTimeDelay) throws GeneralException {
+    private double[][] getCoeficientMatrix(double[] valueArray, Integer dimensionCount, Integer optimalTimeDelay) throws GeneralException {
         Integer pointCountas = dimensionCount + 1;
         double[][] matrixB = new double[pointCountas][pointCountas];
         double[][] matrixD = new double[1][pointCountas];
 
-        List<Integer> neighbourList = getLastPointNeighbours(valueArray, dimensionCount, neighbourPointLimit, optimalTimeDelay);
+        List<Integer> neighbourList = getLastPointNeighbours(valueArray, dimensionCount, optimalTimeDelay);
 
         //sudarom B matricą
         for (int i = 0; i < dimensionCount + 1; i++) {
             for (int j = 0; j < neighbourList.size(); j++) {
                 double[] column = new double[pointCountas];
-                double[] vector = getKey(valueArray, dimensionCount, optimalTimeDelay, neighbourList.get(j));
+                double[] vector = getVector(valueArray, dimensionCount, optimalTimeDelay, neighbourList.get(j));
                 column[0] = 1;
                 System.arraycopy(vector, 0, column, 1, vector.length);
 
@@ -384,12 +409,21 @@ public class DataServiceImpl implements DataService {
         return getCoeficientMatrix(matrixB, matrixD);
     }
 
-    private List<Integer> getLastPointNeighbours(double[] valueArray, int dimensionCount, int neighbourPointLimit, int optimalTimeDelay) throws GeneralException {
+    private double[] getVector(double[] valueArray, int dimensionCount, int optimalTimeDelay, int index) {
+        double[] key = new double[dimensionCount];
+        for (int i = 0; i < dimensionCount; i++) {
+            key[i] = valueArray[index - (i * optimalTimeDelay)];
+        }
+        return key;
+    }
+
+    private List<Integer> getLastPointNeighbours(double[] valueArray, int dimensionCount, final int optimalTimeDelay) throws GeneralException {
         try {
             //Susikonstruojam medį
-            KDTree<Integer> kdTree = new KDTree<Integer>(dimensionCount);
-            int lastIndex = valueArray.length - 2; // -2 nes mums reikia priešpaskutinio indekso
-            for (int i = 0; i < neighbourPointLimit; i++) {
+            KDTree<Integer> kdTree = new KDTree<Integer>(dimensionCount * 5);
+            int lastIndex = valueArray.length - 1;
+            int neighbourPointCount = valueArray.length - (dimensionCount * optimalTimeDelay);
+            for (int i = 1; i < neighbourPointCount; i++) {//Nes paskutinis taškas neturėtų būti kaimynas (tai pradedam nuo 1)
                 double[] key = getKey(valueArray, dimensionCount, optimalTimeDelay, lastIndex - i);
                 if (kdTree.search(key) == null) {
                     kdTree.insert(key, lastIndex - i);
@@ -397,23 +431,41 @@ public class DataServiceImpl implements DataService {
             }
 
             double[] lastKey = getKey(valueArray, dimensionCount, optimalTimeDelay, lastIndex);
-
-            List<Integer> neighbours = kdTree.nearest(lastKey, dimensionCount + 1);//gražinam m + 1 kaimynų
-            // , bet į juos neįeina originalus, tai reikia pridėti
-//            List<Integer> allIndexes = new ArrayList<Integer>();
-//            allIndexes.add(lastIndex);
-//            allIndexes.addAll(neighbours);
-//            return allIndexes;
-            return neighbours;
+            return kdTree.nearest(lastKey, dimensionCount + 1);
+//            final List<Integer> legitNeighbours = new ArrayList<Integer>();
+//            while (legitNeighbours.size() < dimensionCount + 1) {
+//                Checker<Integer> checker = new Checker<Integer>() {
+//                    @Override
+//                    public boolean usable(Integer v) {
+//                        return isLegit(v, legitNeighbours, optimalTimeDelay / 2);
+//                    }
+//                };
+//                List<Integer> neighbours = kdTree.nearest(lastKey, dimensionCount + 1, checker);
+//                supplementLegitNeighbours(neighbours, legitNeighbours, optimalTimeDelay / 2);
+//            }
+//            return legitNeighbours.subList(0, dimensionCount + 1);
         } catch (Exception e) {
             throw new GeneralException("KDTree failed!", e);
         }
     }
 
+    private boolean isLegit(Integer neighbour, List<Integer> legitNeighbours, Integer distanceBetweenNeighbours) {
+        boolean legit = true;
+        for (Integer legitNeighbour : legitNeighbours) {
+            if (Math.abs(neighbour - legitNeighbour) < distanceBetweenNeighbours) {
+                legit = false;
+            }
+        }
+        return legit;
+    }
+
     private double[] getKey(double[] valueArray, int dimensionCount, int optimalTimeDelay, int index) {
-        double[] key = new double[dimensionCount];
-        for (int i = 0; i < dimensionCount; i++) {
-            key[i] = valueArray[index - (i * optimalTimeDelay)];
+        int vectorsToPutToKey = 5;
+        double[] key = new double[dimensionCount * vectorsToPutToKey];
+        for (int i = 0; i < vectorsToPutToKey; i++) {
+            for (int j = 0; j < dimensionCount; j++) {
+                key[(i * dimensionCount) + j] = valueArray[index - i - (j * optimalTimeDelay)];
+            }
         }
         return key;
     }
@@ -434,22 +486,6 @@ public class DataServiceImpl implements DataService {
 
 
         return coeficientMatrix.getData();
-    }
-
-    private double[][] nestedListsToMatrix(List<List<Double>> nestedLists) {
-        double[][] matrix = new double[nestedLists.size()][];
-
-        int i = 0;
-        for (List<Double> list : nestedLists) {
-            double[] row = new double[list.size()];
-            int j = 0;
-            for (Double value : list) {
-                row[j++] = value.doubleValue();
-            }
-            matrix[i++] = row;
-        }
-
-        return matrix;
     }
 
     private double[][] inverseMatrix(double[][] matrix) {

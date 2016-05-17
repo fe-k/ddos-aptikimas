@@ -8,12 +8,14 @@ import java.util.List;
 public interface DataService {
 
     void uploadFileToDatabase(String[] fileNames) throws GeneralException;
+
     String getEntropy(Timestamp start, Timestamp end, Integer increment, Integer windowWidth) throws GeneralException;
-    String calculateMutualInformationReturnOptimalTimeDelay(Timestamp start, Timestamp end, Integer increment
+
+    String getOptimalTimeDelay(Timestamp start, Timestamp end, Integer increment
             , Integer windowWidth, List<Integer> pointCountList) throws GeneralException;
-    String getPredictionParams(Timestamp start, Timestamp end, Integer increment, Integer windowWidth
-            , Integer dimensionCount, List<Integer> pointCount, Integer neighbourPointLimit
-            , Integer optimalTimeDelay, Double startAt, Integer pointsToPredict) throws GeneralException;
+
+    String predict(Timestamp start, Timestamp end, Integer increment, Integer windowWidth
+            , Integer dimensionCount, Integer optimalTimeDelay) throws GeneralException;
 }
 
 

@@ -26,6 +26,17 @@ public class Packet {
     @Column
     String protocol;
 
+    public Packet() {
+    }
+
+    public Packet(Integer id, Timestamp timestamp, String source, String destination, String protocol) {
+        this.id = id;
+        this.timestamp = timestamp;
+        this.source = source;
+        this.destination = destination;
+        this.protocol = protocol;
+    }
+
     public Timestamp getTimestamp() {
         return timestamp;
     }

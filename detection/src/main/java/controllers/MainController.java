@@ -40,6 +40,35 @@ public class MainController {
         return response;
     }
 
+    @RequestMapping(value = "/createDDoS", method = RequestMethod.POST)
+    @ResponseBody
+    String createDDoS(@ModelAttribute CreateDDoSPost createDDoSPost) {
+        String response;
+        try {
+            Timestamp start = createDDoSPost.getStartTimestamp(dateFormat);
+            Timestamp end = createDDoSPost.getEndTimestamp(dateFormat);
+            String destination = createDDoSPost.getDestination();
+            dataService.insertDDoSAttack(start, end, destination);
+            response = SUCCESS;
+        } catch(Exception e) {
+            response = getFullExceptionMessage(e);
+        }
+        return response;
+    }
+
+    @RequestMapping(value = "/deleteDDoS", method = RequestMethod.POST)
+    @ResponseBody
+    String deleteDDoS(@ModelAttribute CreateDDoSPost createDDoSPost) {
+        String response;
+        try {
+            dataService.removeDDoSAttacks();
+            response = SUCCESS;
+        } catch(Exception e) {
+            response = getFullExceptionMessage(e);
+        }
+        return response;
+    }
+
     @RequestMapping(value = "/entropy", method = RequestMethod.POST)
     @ResponseBody
     public String getEntropy(@ModelAttribute EntropyPost entropyPost) {

@@ -6,104 +6,131 @@
     <link rel="stylesheet" type="text/css" href="css/main.css">
 </head>
 <body>
-    <div class="line">
-        <div class="lineNumber">1</div>
-        <div class="description">
-            <p>Kad įkeltumėte failą, įveskite failo pavadinimą ir paspauskite mygtuką "įkelti failus".</p>
-            <p>Failo formatas turi būti "laikas","šaltinio IP adresas","paskirties IP adresas","Protokolas".</p>
-            <p>T.y. visa informacija kabutėse ir skirtingi stulpeliai atskirti kableliu.</p>
-            <p>Laiko formatas turi būti - yyyy-MM-dd HH:mm:ss.SSSSSS</p>
+<div class="line">
+    <div class="lineNumber">1</div>
+    <div class="description">
+        <p>Kad įkeltumėte failą, įveskite failo pavadinimą ir paspauskite mygtuką "įkelti failus".</p>
+        <p>Failo formatas turi būti "laikas","šaltinio IP adresas","paskirties IP adresas","Protokolas".</p>
+        <p>T.y. visa informacija kabutėse ir skirtingi stulpeliai atskirti kableliu.</p>
+        <p>Laiko formatas turi būti - yyyy-MM-dd HH:mm:ss.SSSSSS</p>
+    </div>
+    <form action="uploadFiles" method="post" enctype="application/x-www-form-urlencoded">
+        <div>
+            <label for="fileName">Kelias iki failo</label>
+            <input id="fileName" type="text" name="fileName" value="C:\Users\K\Desktop\TrainingData\w1\1d-inside.csv">
         </div>
-        <form action="uploadFiles" method="post" enctype="application/x-www-form-urlencoded">
-            <div>
-                <label for="fileName">Kelias iki failo</label>
-                <input id="fileName" type="text" name="fileName" value="C:\Users\K\Desktop\TrainingData\w1\1d-inside.csv">
-            </div>
-            <div class="buttonHolder">
-                <input type="submit" value="Įkelti failus">
-            </div>
-        </form>
-    </div>
-    <div class="line">
-        <div class="lineNumber">2</div>
-        <form action="entropy" method="post" enctype="application/x-www-form-urlencoded">
-            <div>
-                <label for="start">Nuo</label>
-                <input id="start" type="text" name="start" value="1999-03-01 08:01:00.0">
-            </div>
-            <div>
-                <label for="end">Iki</label>
-                <input id="end" type="text" name="end" value="1999-03-01 08:10:00.0">
-            </div>
-            <div>
-                <label for="windowWidth">Lango plotis</label>
-                <input id="windowWidth" type="text" name="windowWidth" value="10">
-            </div>
-            <div>
-                <label for="increment">Kas kiek milisekundžių</label>
-                <input id="increment" type="text" name="increment" value="50">
-            </div>
-            <div class="buttonHolder">
-                <input type="submit" value="Apskaičiuoti">
-            </div>
-        </form>
-    </div>
+        <div class="buttonHolder">
+            <input type="submit" value="Įkelti failus">
+        </div>
+    </form>
+</div>
 
-    <div class="line">
-        <div class="lineNumber">3</div>
-        <div class="description">
-            <p>Apskaičiuoja entropijos pateiktame sąraše "mutual information" kai</p>
-            <p>paduodami parametrai skirti entropijos bei "mutual information" skaičiuoti.</p>
-            <p>Gaunamos laiko postūmio vertės, kai bendra informacija pasiekia pirmą minimumą</p>
-        </div>
-        <form action="mutualInformationList" method="post" enctype="application/x-www-form-urlencoded">
-            <div>
-                <label for="3_start">Nuo</label>
-                <input id="3_start" type="text" name="start" value="1999-03-01 09:10:00.0">
-            </div>
-            <div>
-                <label for="3_end">Iki</label>
-                <input id="3_end" type="text" name="end" value="1999-03-01 09:30:00.0">
-            </div>
-            <div>
-                <label for="3_windowWidth">Lango plotis</label>
-                <input id="3_windowWidth" type="text" name="windowWidth" value="20">
-            </div>
-            <div>
-                <label for="3_increment">Kas kiek milisekundžių</label>
-                <input id="3_increment" type="text" name="increment" value="250">
-            </div>
-            <div>
-                <label for="3_pointCount">Taškų skaičius</label>
-                <input id="3_pointCount" type="text" name="pointCount" value="2000">
-            </div>
-            <div class="buttonHolder">
-                <input type="submit" formaction="optimalTimeDelay" value="Apskaičiuoti">
-            </div>
-            <div>
-                <label for="dimensionCount">Dimensijų skaičius</label>
-                <input id="dimensionCount" type="text" name="dimensionCount" value="2">
-            </div>
-            <!--<div>
-                <label for="neighbourPointLimit">Kaimyniniai taškai</label>
-                <input id="neighbourPointLimit" type="text" name="neighbourPointLimit" value="100">
-            </div>-->
-            <div>
-                <label for="optimalTimeDelay">Laiko postūmis</label>
-                <input id="optimalTimeDelay" type="text" name="optimalTimeDelay" value="16">
-            </div>
-            <!--<div>
-                <label for="startAt">Pradedam piešti nuo</label>
-                <input id="startAt" type="text" name="startAt" value="0.95">
-            </div>
-            <div>
-                <label for="pointsToPredict">Kiek taškų spėti</label>
-                <input id="pointsToPredict" type="text" name="pointsToPredict" value="5">
-            </div>-->
-            <div class="buttonHolder">
-                <input type="submit" formaction="calculatePredictionParams" value="Apskaičiuoti prognozavimo parametrus">
-            </div>
-        </form>
+<div class="line">
+    <div class="lineNumber">2</div>
+    <div class="description">
+        <p>DDoS atakų įterpimas. Nurodykite laiko intervalą ir paskirties IP adresą.</p>
+        <p>Paspaudus mygtuką "Sukurti" bus sukurtas paketų srautas į nurodytą paskirties adresą</p>
     </div>
+    <form action="createDDoS" method="post" enctype="application/x-www-form-urlencoded">
+        <div>
+            <label for="startDDOS">Nuo</label>
+            <input id="startDDOS" type="text" name="start" value="1999-03-01 09:10:00.0">
+        </div>
+        <div>
+            <label for="endDDOS">Iki</label>
+            <input id="endDDOS" type="text" name="end" value="1999-03-01 09:20:00.0">
+        </div>
+        <div>
+            <label for="destinationDDOS">Paskirties adresas</label>
+            <input id="destinationDDOS" type="text" name="destination" value="172.16.112.100">
+        </div>
+        <div class="buttonHolder">
+            <input type="submit" value="Sukurti">
+            <input type="submit" formaction="deleteDDoS" value="Pašalinti">
+        </div>
+    </form>
+</div>
+
+<div class="line">
+    <div class="lineNumber">2</div>
+    <form action="entropy" method="post" enctype="application/x-www-form-urlencoded">
+        <div>
+            <label for="start">Nuo</label>
+            <input id="start" type="text" name="start" value="1999-03-01 08:01:00.0">
+        </div>
+        <div>
+            <label for="end">Iki</label>
+            <input id="end" type="text" name="end" value="1999-03-01 08:10:00.0">
+        </div>
+        <div>
+            <label for="windowWidth">Lango plotis</label>
+            <input id="windowWidth" type="text" name="windowWidth" value="10">
+        </div>
+        <div>
+            <label for="increment">Kas kiek milisekundžių</label>
+            <input id="increment" type="text" name="increment" value="50">
+        </div>
+        <div class="buttonHolder">
+            <input type="submit" value="Apskaičiuoti">
+        </div>
+    </form>
+</div>
+
+<div class="line">
+    <div class="lineNumber">3</div>
+    <div class="description">
+        <p>Apskaičiuoja entropijos pateiktame sąraše "mutual information" kai</p>
+        <p>paduodami parametrai skirti entropijos bei "mutual information" skaičiuoti.</p>
+        <p>Gaunamos laiko postūmio vertės, kai bendra informacija pasiekia pirmą minimumą</p>
+    </div>
+    <form action="mutualInformationList" method="post" enctype="application/x-www-form-urlencoded">
+        <div>
+            <label for="3_start">Nuo</label>
+            <input id="3_start" type="text" name="start" value="1999-03-01 09:10:00.0">
+        </div>
+        <div>
+            <label for="3_end">Iki</label>
+            <input id="3_end" type="text" name="end" value="1999-03-01 09:30:00.0">
+        </div>
+        <div>
+            <label for="3_windowWidth">Lango plotis</label>
+            <input id="3_windowWidth" type="text" name="windowWidth" value="20">
+        </div>
+        <div>
+            <label for="3_increment">Kas kiek milisekundžių</label>
+            <input id="3_increment" type="text" name="increment" value="250">
+        </div>
+        <div>
+            <label for="3_pointCount">Taškų skaičius</label>
+            <input id="3_pointCount" type="text" name="pointCount" value="2000">
+        </div>
+        <div class="buttonHolder">
+            <input type="submit" formaction="optimalTimeDelay" value="Apskaičiuoti">
+        </div>
+        <div>
+            <label for="dimensionCount">Dimensijų skaičius</label>
+            <input id="dimensionCount" type="text" name="dimensionCount" value="2">
+        </div>
+        <!--<div>
+            <label for="neighbourPointLimit">Kaimyniniai taškai</label>
+            <input id="neighbourPointLimit" type="text" name="neighbourPointLimit" value="100">
+        </div>-->
+        <div>
+            <label for="optimalTimeDelay">Laiko postūmis</label>
+            <input id="optimalTimeDelay" type="text" name="optimalTimeDelay" value="16">
+        </div>
+        <!--<div>
+            <label for="startAt">Pradedam piešti nuo</label>
+            <input id="startAt" type="text" name="startAt" value="0.95">
+        </div>
+        <div>
+            <label for="pointsToPredict">Kiek taškų spėti</label>
+            <input id="pointsToPredict" type="text" name="pointsToPredict" value="5">
+        </div>-->
+        <div class="buttonHolder">
+            <input type="submit" formaction="calculatePredictionParams" value="Apskaičiuoti prognozavimo parametrus">
+        </div>
+    </form>
+</div>
 </body>
 </html>

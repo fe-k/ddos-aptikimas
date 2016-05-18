@@ -9,6 +9,10 @@ public interface DataService {
 
     void uploadFileToDatabase(String[] fileNames) throws GeneralException;
 
+    void insertDDoSAttack(Timestamp start, Timestamp end, String destination) throws GeneralException;
+
+    void removeDDoSAttacks();
+
     String getEntropy(Timestamp start, Timestamp end, Integer increment, Integer windowWidth) throws GeneralException;
 
     String getOptimalTimeDelay(Timestamp start, Timestamp end, Integer increment

@@ -68,6 +68,32 @@ public class DataServiceImpl implements DataService {
         }
     }
 
+    @Override
+    @Transactional
+    public void insertDDoSAttack(Timestamp start, Timestamp end, String destination) throws GeneralException {
+        long step = 50; //miliseconds
+        int id = packetDao.getMaxPacketId() + 1;
+        List<String> sources = packetDao.getPacketSources(100);
+
+        Timestamp iterator = start;
+        while (iterator.getTime() < end.getTime()) {
+            List<Packet> packetsToInsert = new ArrayList<Packet>();
+            for (String source: sources) {
+                Packet packet = new Packet(id++, iterator, source, destination, "DDOS");
+                packetsToInsert.add(packet);
+                iterator = new Timestamp(iterator.getTime() + step);
+            }
+            packetDao.insertPackets(packetsToInsert);
+        }
+
+    }
+
+    @Override
+    @Transactional
+    public void removeDDoSAttacks() {
+        packetDao.deleteDDoSPackets();
+    }
+
     private Packet getPacket(String line, int fileIndex) throws GeneralException {
         /* Suskaidom eilutę pagal "," */
         String[] cols = line.split("\\\",\\\"");
@@ -110,16 +136,35 @@ public class DataServiceImpl implements DataService {
     @Override
     @Transactional
     public String getEntropy(Timestamp start, Timestamp end, Integer increment, Integer windowWidth) throws GeneralException {
-        List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
-        StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
+        int[] increments = new int[] {250, 500, 1000};
+        int[] windowWidths = new int[] {10, 15, 20, 25, 30};
+        for (int inc = 0; inc < increments.length; inc++) {
+            for (int wid = 0; wid < windowWidths.length; wid++) {
+                increment = increments[inc];
+                windowWidth = windowWidths[wid];
+
+                List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
+                StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
 
         /* Pasiemame entropijos reikšmes */
-        List<ValueInTimeInterval> valuesInTimeIntervals = storage.getListOfEntropies();
-        StringBuilder result = new StringBuilder();
-        for (ValueInTimeInterval v : valuesInTimeIntervals) {
-            result.append(v.getTime()).append("\t").append(v.getValue()).append("\n");
+                List<ValueInTimeInterval> valuesInTimeIntervals = storage.getListOfEntropies();
+                XYSeries entropySeries = new XYSeries(valuesInTimeIntervals.size());
+                StringBuilder result = new StringBuilder();
+                for (int i = 0; i < valuesInTimeIntervals.size(); i++) {
+                    ValueInTimeInterval v = valuesInTimeIntervals.get(i);
+                    result.append(v.getTime()).append("\t").append(v.getValue()).append("\n");
+                    entropySeries.add(i, v.getValue());
+                }
+
+                new Picture()
+                        .addSeries(entropySeries)
+                        .setRange(new double[]{0, valuesInTimeIntervals.size()}, new double[]{0, 1.0})
+                        .plotLine("Laikas", "H", pictureDirectory + "information_entropy_in_time_" + windowWidth + "_" + increment + ".png");
+
+//            return result.toString();
+            }
         }
-        return result.toString();
+        return "SUCCESS";
     }
 
     @Override
@@ -214,14 +259,6 @@ public class DataServiceImpl implements DataService {
         return series;
     }
 
-    private List<Double> convertToDoubleList(List<ValueInTimeInterval> valueInTimeIntervalList) {
-        List<Double> doubleList = new ArrayList<Double>();
-        for (ValueInTimeInterval valueInTimeInterval : valueInTimeIntervalList) {
-            doubleList.add(valueInTimeInterval.getValue());
-        }
-        return doubleList;
-    }
-
     private StorageByDestinationInTimeDomain getStorageWithCalculatedEntropy(List<PacketsInfo> packetsInfo, int windowWidth) {
         StorageByDestinationInTimeDomain storage = new StorageByDestinationInTimeDomain();
 
@@ -268,7 +305,7 @@ public class DataServiceImpl implements DataService {
         XYSeries realValueSeries = new XYSeries(valueList.size());
         XYSeries predictedValueSeries = new XYSeries(valueList.size());
 
-        int pointCountas = 16000;
+        int pointCountas = 32000;
         int predictedPointCount = 0;
         double[] valueArray = getValuesBeforePrediction(pointCountas, valueList);
         addValuesToSeries(realValueSeries, predictedValueSeries, valueArray, 0.99375, pointCountas);

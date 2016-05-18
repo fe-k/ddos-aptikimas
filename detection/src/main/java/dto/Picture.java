@@ -25,6 +25,14 @@ public class Picture {
 
     private XYSeriesCollection seriesCollection;
     private JFreeChart chart;
+    private double[] rangeY;
+    private double[] rangeX;
+
+    public Picture setRange(double[] rangeX, double[] rangeY) {
+        this.rangeX = rangeX;
+        this.rangeY = rangeY;
+        return this;
+    }
 
     public Picture() {
         seriesCollection = new XYSeriesCollection();
@@ -78,6 +86,11 @@ public class Picture {
         ValueAxis leftAxis = plot.getRangeAxis();
         ValueAxis topAxis = null;
         ValueAxis rightAxis = null;
+
+        if (rangeX != null && rangeY != null) {
+            bottomAxis.setRange(rangeX[0], rangeX[1]);
+            leftAxis.setRange(rangeY[0], rangeY[1]);
+        }
 
         try {
             topAxis = (ValueAxis) bottomAxis.clone();

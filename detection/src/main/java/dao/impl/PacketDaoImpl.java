@@ -79,6 +79,30 @@ public class PacketDaoImpl implements PacketDaoCustom {
     }
 
     @Override
+    public List<String> getPacketSources(int amountOfSources) {
+        StringBuilder query = new StringBuilder()
+                .append("select p.source ")
+                .append("from packets as p ")
+                .append("group by p.source ");
+
+        Query nativeQuery = entityManager.createNativeQuery(query.toString());
+        nativeQuery.setMaxResults(amountOfSources);
+        List<String> sources = nativeQuery.getResultList();
+        return sources;
+    }
+
+    @Override
+    public void deleteDDoSPackets() {
+        StringBuilder query = new StringBuilder()
+                .append("delete ")
+                .append("from packets as p ")
+                .append("where p.protocol = 'DDOS'");
+
+        Query nativeQuery = entityManager.createNativeQuery(query.toString());
+        nativeQuery.executeUpdate();
+    }
+
+    @Override
     public List<PacketsInfo> findPacketCounts(Timestamp start, Timestamp end, Integer increment) {
         StringBuilder query = new StringBuilder()
                 .append("select tt.interval_start as t, destination as d, count(*) as c, sum(count(*)) over (partition by tt.interval_start order by tt.interval_start asc) ")

@@ -78,7 +78,7 @@ public class DataServiceImpl implements DataService {
         Timestamp iterator = start;
         while (iterator.getTime() < end.getTime()) {
             List<Packet> packetsToInsert = new ArrayList<Packet>();
-            for (String source: sources) {
+            for (String source : sources) {
                 Packet packet = new Packet(id++, iterator, source, destination, "DDOS");
                 packetsToInsert.add(packet);
                 iterator = new Timestamp(iterator.getTime() + step);
@@ -136,8 +136,8 @@ public class DataServiceImpl implements DataService {
     @Override
     @Transactional
     public String getEntropy(Timestamp start, Timestamp end, Integer increment, Integer windowWidth) throws GeneralException {
-        int[] increments = new int[] {250, 500, 1000};
-        int[] windowWidths = new int[] {10, 15, 20, 25, 30};
+        int[] increments = new int[]{250, 500, 1000};
+        int[] windowWidths = new int[]{10, 15, 20, 25, 30};
         for (int inc = 0; inc < increments.length; inc++) {
             for (int wid = 0; wid < windowWidths.length; wid++) {
                 increment = increments[inc];
@@ -169,30 +169,35 @@ public class DataServiceImpl implements DataService {
 
     @Override
     public String getOptimalTimeDelay(Timestamp start, Timestamp end, Integer increment
-            , Integer windowWidth, List<Integer> pointCountList) throws GeneralException {
-        //List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
-        //StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
-
-        List<Double> valueList = getSinusoideWithError();
-        //getSinusoide();//convertToDoubleList(storage.getListOfEntropies());
+            , Integer windowWidth, String type, List<Integer> pointCountList) throws GeneralException {
+        List<Double> valueList = new ArrayList<Double>();
+        if (type.equals("sin")) {
+            valueList = getSinusoide();
+        } else if (type.equals("sinWithErr")) {
+            valueList = getSinusoideWithError();
+        } else if (type.equals("realValues")) {
+            List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
+            StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
+            valueList = convertToDoubleList(storage.getListOfEntropies());
+        }
 
         StringBuilder result = new StringBuilder();
         List<Integer> localMinimumList = new ArrayList<Integer>();
-        int pointsToCalculate = 150;
+        int pointsToCalculate = 40;
         Picture mutualEntropyGraph = new Picture();
         for (int i = 0; i < pointCountList.size(); i++) {
             XYSeries series = getSeries(pointCountList.get(i), pointsToCalculate, valueList);
             XYSeries fittedSeries = getFittedCurve(series.getItems());
 
             mutualEntropyGraph.addSeries(series);
-            mutualEntropyGraph.addSeries(fittedSeries);
+            //mutualEntropyGraph.addSeries(fittedSeries);
 
             Double firstLocalMinimum = getFirstLocalMinimum(fittedSeries.getItems());
             localMinimumList.add(firstLocalMinimum.intValue());
             result.append(getLine("\t", String.valueOf(pointCountList.get(i)), String.valueOf(firstLocalMinimum))).append("\n");
         }
 
-        mutualEntropyGraph.plotLine("X", "Y", "C:\\Users\\K\\Desktop\\Bakalauras\\latex\\paveiksleliai\\mutual_information.png");
+        mutualEntropyGraph.plotLine("Laiko postūmis", "I", pictureDirectory + "mutual_information.png");
 
         for (int i = 0; i < pointCountList.size(); i++) {
             Picture phaseSpace = new Picture();
@@ -203,10 +208,18 @@ public class DataServiceImpl implements DataService {
                 phaseSpaceSeries.add(x, y);
             }
             phaseSpace.addSeries(phaseSpaceSeries);
-            phaseSpace.plotScatter("X", "Y", "C:\\Users\\K\\Desktop\\Bakalauras\\latex\\paveiksleliai\\phase_space_" + pointCountList.get(i) + ".png");
+            phaseSpace.plotScatter("X", "Y", pictureDirectory + "phase_space_" + pointCountList.get(i) + ".png");
         }
 
         return result.toString();
+    }
+
+    private List<Double> convertToDoubleList(List<ValueInTimeInterval> valueInTimeIntervalList) {
+        List<Double> doubleList = new ArrayList<Double>();
+        for (ValueInTimeInterval valueInTimeInterval : valueInTimeIntervalList) {
+            doubleList.add(valueInTimeInterval.getValue());
+        }
+        return doubleList;
     }
 
     private XYSeries getFittedCurve(List<XYDataItem> dataItemList) {
@@ -395,7 +408,7 @@ public class DataServiceImpl implements DataService {
 
     private List<Double> getSinusoide() {
         List<Double> sinusoide = new ArrayList<Double>();
-        double step = 0.005;
+        double step = 0.05;
         for (int i = 0; i < 1E5; i++) {
             Double value = Math.sin(step * i * Math.PI) + 2;
             sinusoide.add(value);
@@ -406,8 +419,8 @@ public class DataServiceImpl implements DataService {
 
     public List<Double> getSinusoideWithError() {
         List<Double> sinusoide = new ArrayList<Double>();
-        double step = 0.001;
-        for (int i = 0; i < 1E7; i++) {
+        double step = 0.05;
+        for (int i = 0; i < 1E5; i++) {
             double error = Math.random() / 20;
             Double sin = Math.sin(step * i * Math.PI);
             Double value = sin + 2 + error;

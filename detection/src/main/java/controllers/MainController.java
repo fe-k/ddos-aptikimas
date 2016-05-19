@@ -100,8 +100,9 @@ public class MainController {
             Integer windowWidth = optimalTimeDelayPost.getWindowWidth();
             Integer increment = optimalTimeDelayPost.getIncrement();
             List<Integer> pointCounts = optimalTimeDelayPost.getPointCountList();
+            String type = optimalTimeDelayPost.getType();
 
-            response = dataService.getOptimalTimeDelay(start, end, increment, windowWidth, pointCounts);
+            response = dataService.getOptimalTimeDelay(start, end, increment, windowWidth, type, pointCounts);
             response = "<pre>" + response + "</pre>";
         } catch (Exception e) {
             response = getFullExceptionMessage(e);

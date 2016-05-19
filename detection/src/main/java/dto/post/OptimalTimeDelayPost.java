@@ -11,8 +11,17 @@ import java.util.List;
 public class OptimalTimeDelayPost extends EntropyPost {
 
     private String pointCount;
+    private String type;
 
     public OptimalTimeDelayPost() {
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 
     public String getPointCount() {

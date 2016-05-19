@@ -16,7 +16,7 @@ public interface DataService {
     String getEntropy(Timestamp start, Timestamp end, Integer increment, Integer windowWidth) throws GeneralException;
 
     String getOptimalTimeDelay(Timestamp start, Timestamp end, Integer increment
-            , Integer windowWidth, List<Integer> pointCountList) throws GeneralException;
+            , Integer windowWidth, String type, List<Integer> pointCountList) throws GeneralException;
 
     String predict(Timestamp start, Timestamp end, Integer increment, Integer windowWidth
             , Integer dimensionCount, Integer optimalTimeDelay) throws GeneralException;

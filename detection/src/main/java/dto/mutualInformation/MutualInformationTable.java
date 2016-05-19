@@ -89,6 +89,7 @@ public class MutualInformationTable {
         int Ns = getAmountOfSegments(N);
         Ns = N % Ns == 0 ? Ns : Ns + 1; //Jeigu nesidalina, tai pridedam vienetą
         int Nv = getAmountOfValuesInASegment(N);
+        int Nleft = N - (N / Nv) * Nv;
 
         Integer[][] probabilityMatrix = initializeProbabilityMatrix(Ns);
 
@@ -99,13 +100,23 @@ public class MutualInformationTable {
         };
 
         int k = N / Nv;
-        for (int i = 0; i < k; i++) {
-            for (int j = 0; j < k; j++) {
-                int newN = Nv * k;
+        int numberOfColsAndRows = k * Nv == N ? k : k + 1;
+        for (int i = 0; i < numberOfColsAndRows; i++) {
+            for (int j = 0; j < numberOfColsAndRows; j++) {
                 int dotCount = probabilityMatrix[i][j];
+
+                int Ngrid;
+                if (i == k && j == k) {
+                    Ngrid = Nleft * Nleft;
+                } else if (i == k || j == k) {
+                    Ngrid = Nv * Nleft;
+                } else {
+                    Ngrid = Nv * Nv;
+                }
+
                 if (dotCount > 0) {
-                    double firstSide = dotCount / (double) newN;
-                    double secondSide = Math.log((dotCount * newN) / (double) (Nv * Nv)) / Math.log(2);
+                    double firstSide = dotCount / (double) N;
+                    double secondSide = Math.log((dotCount * N) / (double) (Ngrid)) / Math.log(2);
                     mutualInformation += firstSide * secondSide;
                 }
             }

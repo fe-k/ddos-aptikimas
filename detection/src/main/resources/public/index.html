@@ -9,10 +9,15 @@
 <div class="line">
     <div class="lineNumber">1</div>
     <div class="description">
-        <p>Kad įkeltumėte failą, įveskite failo pavadinimą ir paspauskite mygtuką "įkelti failus".</p>
-        <p>Failo formatas turi būti "laikas","šaltinio IP adresas","paskirties IP adresas","Protokolas".</p>
-        <p>T.y. visa informacija kabutėse ir skirtingi stulpeliai atskirti kableliu.</p>
-        <p>Laiko formatas turi būti - yyyy-MM-dd HH:mm:ss.SSSSSS</p>
+        <p>
+            Failo įkėlimo į duomenų bazę forma. Failai bus įkelti iš serverio failinės sistemos.
+            Kad įkeltumėte failą, įveskite failo pavadinimą ir paspauskite mygtuką "įkelti failus".
+        </p>
+        <p>
+            Failo formatas turi būti "laikas","šaltinio IP adresas","paskirties IP adresas","Protokolas".
+            T.y. visa informacija kabutėse ir skirtingi stulpeliai atskirti kableliu.
+            Laiko formatas turi būti - yyyy-MM-dd HH:mm:ss.SSSSSS
+        </p>
     </div>
     <form action="uploadFiles" method="post" enctype="application/x-www-form-urlencoded">
         <div>
@@ -28,8 +33,10 @@
 <div class="line">
     <div class="lineNumber">2</div>
     <div class="description">
-        <p>DDoS atakų įterpimas. Nurodykite laiko intervalą ir paskirties IP adresą.</p>
-        <p>Paspaudus mygtuką "Sukurti" bus sukurtas paketų srautas į nurodytą paskirties adresą</p>
+        <p>
+            DDoS atakų įterpimas. Nurodykite laiko intervalą ir paskirties IP adresą.
+            Paspaudus mygtuką "Sukurti" bus sukurtas paketų srautas į nurodytą paskirties adresą
+        </p>
     </div>
     <form action="createDDoS" method="post" enctype="application/x-www-form-urlencoded">
         <div>
@@ -52,7 +59,14 @@
 </div>
 
 <div class="line">
-    <div class="lineNumber">2</div>
+    <div class="lineNumber">3</div>
+    <div class="description">
+        <p>
+            Entropijos apskaičiavimas. Paspaudus mygtuką "Apskaičiuoti" bus apskaičiuotos informacijos entropijos
+            vertės,
+            naudojant nurodytus parametrus.
+        </p>
+    </div>
     <form action="entropy" method="post" enctype="application/x-www-form-urlencoded">
         <div>
             <label for="start">Nuo</label>
@@ -77,11 +91,16 @@
 </div>
 
 <div class="line">
-    <div class="lineNumber">3</div>
+    <div class="lineNumber">4</div>
     <div class="description">
-        <p>Apskaičiuoja entropijos pateiktame sąraše "mutual information" kai</p>
-        <p>paduodami parametrai skirti entropijos bei "mutual information" skaičiuoti.</p>
-        <p>Gaunamos laiko postūmio vertės, kai bendra informacija pasiekia pirmą minimumą</p>
+        <p>
+            Paspaudus mygtuką "Rasti laiko poslinkį" bus apskaičiuotas optimalus laiko poslinkis.
+            Optimalaus laiko poslinkio vertės yra apskaičiuojamos naudojant nustatytus parametrus.
+            Gaunamos laiko postūmio vertės, kai bendra informacija pasiekia pirmą minimumą
+        </p>
+        <p>
+            Paspaudus mygtuką "Prognozuoti" bus apskaičiuojamos prognozuotos vertės.
+        </p>
     </div>
     <form action="mutualInformationList" method="post" enctype="application/x-www-form-urlencoded">
         <div>
@@ -104,31 +123,31 @@
             <label for="3_pointCount">Taškų skaičius</label>
             <input id="3_pointCount" type="text" name="pointCount" value="2000">
         </div>
+        <div>
+            <label for="sinType">Sinusoidė</label>
+            <input id="sinType" type="radio" name="type" value="sin" checked>
+        </div>
+        <div>
+            <label for="sinWithErrType">Sinusoidė su triukšmu</label>
+            <input id="sinWithErrType" type="radio" name="type" value="sinWithErr">
+        </div>
+        <div>
+            <label for="realValuesType">Tikros vertės</label>
+            <input id="realValuesType" type="radio" name="type" value="realValues">
+        </div>
         <div class="buttonHolder">
-            <input type="submit" formaction="optimalTimeDelay" value="Apskaičiuoti">
+            <input type="submit" formaction="optimalTimeDelay" value="Rasti laiko poslinkį">
         </div>
         <div>
             <label for="dimensionCount">Dimensijų skaičius</label>
             <input id="dimensionCount" type="text" name="dimensionCount" value="2">
         </div>
-        <!--<div>
-            <label for="neighbourPointLimit">Kaimyniniai taškai</label>
-            <input id="neighbourPointLimit" type="text" name="neighbourPointLimit" value="100">
-        </div>-->
         <div>
             <label for="optimalTimeDelay">Laiko postūmis</label>
             <input id="optimalTimeDelay" type="text" name="optimalTimeDelay" value="16">
         </div>
-        <!--<div>
-            <label for="startAt">Pradedam piešti nuo</label>
-            <input id="startAt" type="text" name="startAt" value="0.95">
-        </div>
-        <div>
-            <label for="pointsToPredict">Kiek taškų spėti</label>
-            <input id="pointsToPredict" type="text" name="pointsToPredict" value="5">
-        </div>-->
         <div class="buttonHolder">
-            <input type="submit" formaction="calculatePredictionParams" value="Apskaičiuoti prognozavimo parametrus">
+            <input type="submit" formaction="calculatePredictionParams" value="Prognozuoti">
         </div>
     </form>
 </div>

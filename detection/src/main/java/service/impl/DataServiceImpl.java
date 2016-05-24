@@ -170,16 +170,7 @@ public class DataServiceImpl implements DataService {
     @Override
     public String getOptimalTimeDelay(Timestamp start, Timestamp end, Integer increment
             , Integer windowWidth, String type, List<Integer> pointCountList) throws GeneralException {
-        List<Double> valueList = new ArrayList<Double>();
-        if (type.equals("sin")) {
-            valueList = getSinusoide();
-        } else if (type.equals("sinWithErr")) {
-            valueList = getSinusoideWithError();
-        } else if (type.equals("realValues")) {
-            List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
-            StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
-            valueList = convertToDoubleList(storage.getListOfEntropies());
-        }
+        List<Double> valueList = getCurrentValues(start, end, increment, windowWidth, type);
 
         StringBuilder result = new StringBuilder();
         List<Integer> localMinimumList = new ArrayList<Integer>();
@@ -310,20 +301,28 @@ public class DataServiceImpl implements DataService {
     }
 
     @Override
-    public String predict(Timestamp start, Timestamp end, Integer increment, Integer windowWidth
+    public String predict(Timestamp start, Timestamp end, Integer increment, Integer windowWidth, String type
             , Integer dimensionCount, Integer optimalTimeDelay) throws GeneralException {
 
-        List<Double> valueList = getCurrentValues(start, end, increment, windowWidth);
+        List<Double> valueList = getCurrentValues(start, end, increment, windowWidth, type);
+
+        int pointCountas = 3400;
+        int predictedPointCount = 0;
 
         XYSeries realValueSeries = new XYSeries(valueList.size());
         XYSeries predictedValueSeries = new XYSeries(valueList.size());
 
-        int pointCountas = 32000;
-        int predictedPointCount = 0;
         double[] valueArray = getValuesBeforePrediction(pointCountas, valueList);
-        addValuesToSeries(realValueSeries, predictedValueSeries, valueArray, 0.99375, pointCountas);
+        addValuesToSeries(realValueSeries, predictedValueSeries, valueArray, 0.9853, pointCountas);
 
         StringBuilder result = new StringBuilder();
+        for (int i = (int) (pointCountas * 0.9853); i < pointCountas; i++) {
+            result.append(getLine("\t"
+                    , String.valueOf(i)
+                    , String.valueOf(valueArray[i])
+                    , String.valueOf(valueArray[i])
+            )).append("\n");
+        }
         try {
             while (true) {
                 int i = predictedPointCount;
@@ -334,16 +333,22 @@ public class DataServiceImpl implements DataService {
                 double predictedValue = predictedMatrix[0][0];
                 double nextRealValue = valueList.get(pointCountas + i);
 
-                if (Math.abs(predictedValue - nextRealValue) > nextRealValue) {
+                if (Math.abs(predictedValue - nextRealValue) > 0.25) {
                     break;
                 }
 
                 realValueSeries.add(i + pointCountas, nextRealValue);
                 predictedValueSeries.add(i + pointCountas, predictedValue);
+                result.append(getLine("\t"
+                        , String.valueOf(i + pointCountas)
+                        , String.valueOf(nextRealValue)
+                        , String.valueOf(predictedValue)
+                )).append("\n");
 
                 valueArray = modifyValueArray(valueArray, predictedValue);
                 predictedPointCount++;
-                result.append("Coffs\n").append(matrixToString(coeficientMatrix)).append("\n");
+
+                //result.append("Coffs\n").append(matrixToString(coeficientMatrix)).append("\n");
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -357,10 +362,10 @@ public class DataServiceImpl implements DataService {
     private void plotRealAndPredictedValueGraph(XYSeries realValueSeries, XYSeries predictedValueSeries) throws GeneralException {
         new Picture()
                 .addSeries(realValueSeries)
-                .plotLine("X", "Y", pictureDirectory + "generated_real_values.png");
+                .plotLine("Laikas", "Re", pictureDirectory + "generated_real_values.png");
         new Picture()
                 .addSeries(predictedValueSeries)
-                .plotLine("X", "Y", pictureDirectory + "generated_predicted_values.png");
+                .plotLine("Laikas", "Re", pictureDirectory + "generated_predicted_values.png");
     }
 
     private double[] modifyValueArray(double[] valueArray, double valueToAdd) {
@@ -396,19 +401,23 @@ public class DataServiceImpl implements DataService {
         return valueArray;
     }
 
-    private List<Double> getCurrentValues(Timestamp start, Timestamp end, Integer increment, Integer windowWidth) {
-        List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
-        StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
-
-        List<Double> valueList = //getSinusoideWithError();
-                getSinusoide();
-        //convertToDoubleList(storage.getListOfEntropies());
+    private List<Double> getCurrentValues(Timestamp start, Timestamp end, Integer increment, Integer windowWidth, String type) {
+        List<Double> valueList = new ArrayList<Double>();
+        if (type.equals("sin")) {
+            valueList = getSinusoide();
+        } else if (type.equals("sinWithErr")) {
+            valueList = getSinusoideWithError();
+        } else if (type.equals("realValues")) {
+            List<PacketsInfo> packetsInfo = packetDao.findPacketCounts(start, end, increment);
+            StorageByDestinationInTimeDomain storage = getStorageWithCalculatedEntropy(packetsInfo, windowWidth);
+            valueList = convertToDoubleList(storage.getListOfEntropies());
+        }
         return valueList;
     }
 
     private List<Double> getSinusoide() {
         List<Double> sinusoide = new ArrayList<Double>();
-        double step = 0.05;
+        double step = 0.005;
         for (int i = 0; i < 1E5; i++) {
             Double value = Math.sin(step * i * Math.PI) + 2;
             sinusoide.add(value);
@@ -419,7 +428,7 @@ public class DataServiceImpl implements DataService {
 
     public List<Double> getSinusoideWithError() {
         List<Double> sinusoide = new ArrayList<Double>();
-        double step = 0.05;
+        double step = 0.005;
         for (int i = 0; i < 1E5; i++) {
             double error = Math.random() / 20;
             Double sin = Math.sin(step * i * Math.PI);

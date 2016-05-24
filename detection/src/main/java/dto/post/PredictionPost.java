@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PredictionParamsPost extends EntropyPost {
+public class PredictionPost extends EntropyPost {
 
     private Integer dimensionCount;
     private String pointCount;
@@ -13,6 +13,15 @@ public class PredictionParamsPost extends EntropyPost {
     private Double startAt;
     private Integer pointsToPredict;
     private Integer neighbourPointLimit;
+    private String type;
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
 
     public Integer getNeighbourPointLimit() {
         return neighbourPointLimit;

@@ -112,21 +112,22 @@ public class MainController {
 
     @RequestMapping(value = "/calculatePredictionParams", method = RequestMethod.POST)
     @ResponseBody
-    public String getPredictionParams(@ModelAttribute PredictionParamsPost predictionParamsPost) {
+    public String predict(@ModelAttribute PredictionPost predictionPost) {
         String response = null;
         try {
-            Timestamp start = predictionParamsPost.getStartTimestamp(dateFormat);
-            Timestamp end = predictionParamsPost.getEndTimestamp(dateFormat);
-            Integer windowWidth = predictionParamsPost.getWindowWidth();
-            Integer increment = predictionParamsPost.getIncrement();
-            Integer dimensionCount = predictionParamsPost.getDimensionCount();
-            List<Integer> pointCountList = predictionParamsPost.getPointCountList();
-            Integer optimalTimeDelay = predictionParamsPost.getOptimalTimeDelay();
-            Double startAt = predictionParamsPost.getStartAt();
-            Integer pointsToPredict = predictionParamsPost.getPointsToPredict();
-            Integer neighbourPointLimit = predictionParamsPost.getNeighbourPointLimit();
+            Timestamp start = predictionPost.getStartTimestamp(dateFormat);
+            Timestamp end = predictionPost.getEndTimestamp(dateFormat);
+            Integer windowWidth = predictionPost.getWindowWidth();
+            Integer increment = predictionPost.getIncrement();
+            Integer dimensionCount = predictionPost.getDimensionCount();
+            List<Integer> pointCountList = predictionPost.getPointCountList();
+            Integer optimalTimeDelay = predictionPost.getOptimalTimeDelay();
+            Double startAt = predictionPost.getStartAt();
+            Integer pointsToPredict = predictionPost.getPointsToPredict();
+            Integer neighbourPointLimit = predictionPost.getNeighbourPointLimit();
+            String type = predictionPost.getType();
 
-            response = dataService.predict(start, end, increment, windowWidth, dimensionCount
+            response = dataService.predict(start, end, increment, windowWidth, type, dimensionCount
                     , optimalTimeDelay);
             response = "<pre>" + response + "</pre>";
         } catch (Exception e) {

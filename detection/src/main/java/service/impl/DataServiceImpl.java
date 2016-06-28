@@ -17,6 +17,7 @@ import org.apache.commons.math3.linear.*;
 import org.jfree.data.xy.XYDataItem;
 import org.jfree.data.xy.XYSeries;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import service.DataService;
 
@@ -37,7 +38,9 @@ public class DataServiceImpl implements DataService {
 
     private SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     private DecimalFormat decimalFormat = new DecimalFormat("0.0000");
-    private String pictureDirectory = "C:\\Users\\K\\Desktop\\Bakalauras\\latex\\paveiksleliai\\";
+
+    @Value("${detection.picture.directory}")
+    private String pictureDirectory;
 
     @Override
     @Transactional

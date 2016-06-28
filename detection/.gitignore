@@ -1,2 +1,4 @@
 /target/
 /detection.iml
+/.idea/
+*.iml
